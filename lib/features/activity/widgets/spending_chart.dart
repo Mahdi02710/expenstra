@@ -6,10 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 class SpendingChart extends StatelessWidget {
   final Map<String, double> spendingData;
 
-  const SpendingChart({
-    super.key,
-    required this.spendingData,
-  });
+  const SpendingChart({super.key, required this.spendingData});
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +34,9 @@ class SpendingChart extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildLegend(),
         ],
       ),
@@ -55,14 +52,15 @@ class SpendingChart extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
-      child: const Center(
-        child: Text('No spending data available'),
-      ),
+      child: const Center(child: Text('No spending data available')),
     );
   }
 
   List<PieChartSectionData> _buildPieChartSections() {
-    final total = spendingData.values.fold<double>(0, (sum, value) => sum + value);
+    final total = spendingData.values.fold<double>(
+      0,
+      (sum, value) => sum + value,
+    );
     if (total == 0) return [];
 
     final sortedEntries = spendingData.entries.toList()
@@ -73,7 +71,7 @@ class SpendingChart extends StatelessWidget {
       final category = entry.value.key;
       final amount = entry.value.value;
       final percentage = (amount / total * 100);
-      
+
       return PieChartSectionData(
         color: AppColors.getChartColor(index),
         value: amount,
@@ -98,7 +96,7 @@ class SpendingChart extends StatelessWidget {
         final index = entry.key;
         final category = entry.value.key;
         final amount = entry.value.value;
-        
+
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -110,16 +108,13 @@ class SpendingChart extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            
+
             const SizedBox(width: 8),
-            
-            Text(
-              category,
-              style: AppTextStyles.caption,
-            ),
-            
+
+            Text(category, style: AppTextStyles.caption),
+
             const SizedBox(width: 4),
-            
+
             Text(
               '\$${amount.toStringAsFixed(0)}',
               style: AppTextStyles.caption.copyWith(
