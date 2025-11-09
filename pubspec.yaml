@@ -26,6 +26,11 @@ dev_dependencies:
 
   flutter_lints: ^5.0.0
 
+dependency_overrides:
+  # fl_chart requires newer matrix operations on Matrix4 (translateByDouble/scaleByDouble)
+  # pin a compatible vector_math to avoid build-time method missing errors
+  vector_math: ^2.1.5
+
 
 flutter:
 
