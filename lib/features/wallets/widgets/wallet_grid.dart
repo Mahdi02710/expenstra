@@ -59,16 +59,13 @@ class WalletGrid extends StatelessWidget {
               color: AppColors.primary,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
-          Text(
-            'No wallets yet',
-            style: AppTextStyles.h4,
-          ),
-          
+
+          Text('No wallets yet', style: AppTextStyles.h4),
+
           const SizedBox(height: 8),
-          
+
           Text(
             'Add your first wallet to start tracking your finances.',
             style: AppTextStyles.body2,
@@ -84,11 +81,7 @@ class WalletCard extends StatefulWidget {
   final Wallet wallet;
   final VoidCallback onTap;
 
-  const WalletCard({
-    super.key,
-    required this.wallet,
-    required this.onTap,
-  });
+  const WalletCard({super.key, required this.wallet, required this.onTap});
 
   @override
   State<WalletCard> createState() => _WalletCardState();
@@ -106,13 +99,9 @@ class _WalletCardState extends State<WalletCard>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.96,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -124,7 +113,7 @@ class _WalletCardState extends State<WalletCard>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTapDown: (_) => _animationController.forward(),
       onTapUp: (_) => _animationController.reverse(),
@@ -145,7 +134,7 @@ class _WalletCardState extends State<WalletCard>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _getWalletAccentColor().withOpacity(0.1),
+                    color: _getWalletAccentColor().withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -162,14 +151,14 @@ class _WalletCardState extends State<WalletCard>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            _getWalletAccentColor().withOpacity(0.05),
-                            _getWalletAccentColor().withOpacity(0.02),
+                            _getWalletAccentColor().withValues(alpha: 0.05),
+                            _getWalletAccentColor().withValues(alpha: 0.02),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  
+
                   // Content
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -184,7 +173,9 @@ class _WalletCardState extends State<WalletCard>
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: _getWalletAccentColor().withOpacity(0.15),
+                                color: _getWalletAccentColor().withValues(
+                                  alpha: 0.15,
+                                ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(
@@ -194,7 +185,7 @@ class _WalletCardState extends State<WalletCard>
                                 ),
                               ),
                             ),
-                            
+
                             if (!widget.wallet.isActive)
                               Container(
                                 width: 8,
@@ -204,7 +195,8 @@ class _WalletCardState extends State<WalletCard>
                                   shape: BoxShape.circle,
                                 ),
                               )
-                            else if (widget.wallet.isCredit && widget.wallet.balance < 0)
+                            else if (widget.wallet.isCredit &&
+                                widget.wallet.balance < 0)
                               Container(
                                 width: 8,
                                 height: 8,
@@ -215,31 +207,35 @@ class _WalletCardState extends State<WalletCard>
                               ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 12),
-                        
+
                         // Wallet name
                         Text(
                           widget.wallet.name,
                           style: AppTextStyles.subtitle1.copyWith(
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.textPrimary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        
+
                         const SizedBox(height: 2),
-                        
+
                         // Account number
                         Text(
                           widget.wallet.maskedAccountNumber,
                           style: AppTextStyles.caption.copyWith(
-                            color: isDark ? AppColors.darkTextMuted : AppColors.textMuted,
+                            color: isDark
+                                ? AppColors.darkTextMuted
+                                : AppColors.textMuted,
                           ),
                         ),
-                        
+
                         const Spacer(),
-                        
+
                         // Balance
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,12 +243,14 @@ class _WalletCardState extends State<WalletCard>
                             Text(
                               widget.wallet.balanceStatus,
                               style: AppTextStyles.caption.copyWith(
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
                               ),
                             ),
-                            
+
                             const SizedBox(height: 2),
-                            
+
                             Text(
                               widget.wallet.formattedBalanceWithSign,
                               style: AppTextStyles.subtitle1.copyWith(
@@ -267,9 +265,10 @@ class _WalletCardState extends State<WalletCard>
                       ],
                     ),
                   ),
-                  
+
                   // Credit utilization indicator for credit cards
-                  if (widget.wallet.isCredit && widget.wallet.creditLimit != null)
+                  if (widget.wallet.isCredit &&
+                      widget.wallet.creditLimit != null)
                     Positioned(
                       right: 0,
                       bottom: 0,
@@ -277,7 +276,7 @@ class _WalletCardState extends State<WalletCard>
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: _getUtilizationColor().withOpacity(0.1),
+                          color: _getUtilizationColor().withValues(alpha: 0.1),
                           borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(16),
                             bottomRight: Radius.circular(16),

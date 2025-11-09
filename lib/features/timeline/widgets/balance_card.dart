@@ -29,7 +29,9 @@ class BalanceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? AppColors.gold : AppColors.primary).withOpacity(0.3),
+            color: (isDark ? AppColors.gold : AppColors.primary).withValues(
+              alpha: 0.3,
+            ),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -45,13 +47,16 @@ class BalanceCard extends StatelessWidget {
               Text(
                 'Total Balance',
                 style: AppTextStyles.body1.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -64,9 +69,9 @@ class BalanceCard extends StatelessWidget {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Balance amount
           Text(
             formatter.format(totalBalance),
@@ -75,17 +80,17 @@ class BalanceCard extends StatelessWidget {
               fontSize: 36,
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // This month summary
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -95,12 +100,12 @@ class BalanceCard extends StatelessWidget {
                 Text(
                   'This Month',
                   style: AppTextStyles.body2.copyWith(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Income and expenses
                 Row(
                   children: [
@@ -123,7 +128,7 @@ class BalanceCard extends StatelessWidget {
                               Text(
                                 'Income',
                                 style: AppTextStyles.caption.copyWith(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                 ),
                               ),
                             ],
@@ -139,7 +144,7 @@ class BalanceCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     // Expenses
                     Expanded(
                       child: Column(
@@ -151,7 +156,7 @@ class BalanceCard extends StatelessWidget {
                                 width: 8,
                                 height: 8,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: Colors.white.withValues(alpha: 0.6),
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -159,7 +164,7 @@ class BalanceCard extends StatelessWidget {
                               Text(
                                 'Expenses',
                                 style: AppTextStyles.caption.copyWith(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                 ),
                               ),
                             ],
@@ -177,9 +182,9 @@ class BalanceCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Net amount
                 Container(
                   width: double.infinity,
@@ -187,7 +192,7 @@ class BalanceCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -198,14 +203,14 @@ class BalanceCard extends StatelessWidget {
                       Text(
                         'Net',
                         style: AppTextStyles.body2.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                       ),
                       Row(
                         children: [
                           Icon(
-                            netThisMonth >= 0 
-                                ? Icons.trending_up 
+                            netThisMonth >= 0
+                                ? Icons.trending_up
                                 : Icons.trending_down,
                             size: 16,
                             color: Colors.white,

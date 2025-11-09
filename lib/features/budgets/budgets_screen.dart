@@ -199,10 +199,10 @@ class _BudgetsScreenState extends State<BudgetsScreen>
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: (tip['color'] as Color).withOpacity(0.05),
+              color: (tip['color'] as Color).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: (tip['color'] as Color).withOpacity(0.1),
+                color: (tip['color'] as Color).withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
@@ -212,7 +212,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: (tip['color'] as Color).withOpacity(0.1),
+                    color: (tip['color'] as Color).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

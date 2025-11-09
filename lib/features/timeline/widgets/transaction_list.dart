@@ -31,7 +31,7 @@ class TransactionList extends StatelessWidget {
       children: groupedTransactions.entries.map((entry) {
         final dateLabel = entry.key;
         final dayTransactions = entry.value;
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -60,15 +60,15 @@ class TransactionList extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Transactions for this date
-            ...dayTransactions.map((transaction) => 
-              TransactionItem(
+            ...dayTransactions.map(
+              (transaction) => TransactionItem(
                 transaction: transaction,
                 onTap: () => onTransactionTap(transaction),
               ),
             ),
-            
+
             const SizedBox(height: 8),
           ],
         );
@@ -94,16 +94,13 @@ class TransactionList extends StatelessWidget {
               color: AppColors.primary,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
-          Text(
-            'No transactions yet',
-            style: AppTextStyles.h4,
-          ),
-          
+
+          Text('No transactions yet', style: AppTextStyles.h4),
+
           const SizedBox(height: 8),
-          
+
           Text(
             'Your transactions will appear here once you start adding them.',
             style: AppTextStyles.body2,
@@ -117,9 +114,11 @@ class TransactionList extends StatelessWidget {
   String _getDayTotal(List<Transaction> transactions) {
     final total = transactions.fold<double>(
       0.0,
-      (sum, transaction) => sum + (transaction.isIncome ? transaction.amount : -transaction.amount),
+      (sum, transaction) =>
+          sum +
+          (transaction.isIncome ? transaction.amount : -transaction.amount),
     );
-    
+
     final sign = total >= 0 ? '+' : '';
     return '$sign\$${total.abs().toStringAsFixed(2)}';
   }
@@ -139,7 +138,7 @@ class TransactionItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final dataService = DataService();
     final wallet = dataService.getWallet(transaction.walletId ?? '');
-    
+
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -161,9 +160,9 @@ class TransactionItem extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(width: 16),
-            
+
             // Transaction details
             Expanded(
               child: Column(
@@ -175,34 +174,25 @@ class TransactionItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  
+
                   const SizedBox(height: 2),
-                  
+
                   Row(
                     children: [
-                      Text(
-                        transaction.category,
-                        style: AppTextStyles.body2,
-                      ),
-                      
+                      Text(transaction.category, style: AppTextStyles.body2),
+
                       if (wallet != null) ...[
-                        Text(
-                          ' • ',
-                          style: AppTextStyles.body2,
-                        ),
-                        Text(
-                          wallet.name,
-                          style: AppTextStyles.body2,
-                        ),
+                        Text(' • ', style: AppTextStyles.body2),
+                        Text(wallet.name, style: AppTextStyles.body2),
                       ],
                     ],
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(width: 16),
-            
+
             // Amount and time
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -214,13 +204,10 @@ class TransactionItem extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-                
+
                 const SizedBox(height: 2),
-                
-                Text(
-                  transaction.timeAgo,
-                  style: AppTextStyles.caption,
-                ),
+
+                Text(transaction.timeAgo, style: AppTextStyles.caption),
               ],
             ),
           ],
@@ -231,11 +218,13 @@ class TransactionItem extends StatelessWidget {
 
   Color _getIconBackgroundColor(BuildContext context, Transaction transaction) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     if (transaction.isIncome) {
-      return AppColors.income.withOpacity(0.15);
+      return AppColors.income.withValues(alpha: 0.15);
     } else {
-      return (isDark ? AppColors.gold : AppColors.primary).withOpacity(0.1);
+      return (isDark ? AppColors.gold : AppColors.primary).withValues(
+        alpha: 0.1,
+      );
     }
   }
 }

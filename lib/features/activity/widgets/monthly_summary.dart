@@ -31,8 +31,8 @@ class MonthlySummary extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? AppColors.gold : AppColors.primary).withOpacity(
-              0.3,
+            color: (isDark ? AppColors.gold : AppColors.primary).withValues(
+              alpha: 0.3,
             ),
             blurRadius: 20,
             offset: const Offset(0, 8),
@@ -56,7 +56,7 @@ class MonthlySummary extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -79,7 +79,7 @@ class MonthlySummary extends StatelessWidget {
               Text(
                 'Net Income',
                 style: AppTextStyles.body2.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
 
@@ -113,10 +113,10 @@ class MonthlySummary extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -140,7 +140,7 @@ class MonthlySummary extends StatelessWidget {
                         Text(
                           'Income',
                           style: AppTextStyles.body2.copyWith(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -167,7 +167,7 @@ class MonthlySummary extends StatelessWidget {
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.6),
+                            color: Colors.white.withValues(alpha: 0.6),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -175,7 +175,7 @@ class MonthlySummary extends StatelessWidget {
                         Text(
                           'Expenses',
                           style: AppTextStyles.body2.copyWith(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -199,7 +199,7 @@ class MonthlySummary extends StatelessWidget {
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -209,7 +209,7 @@ class MonthlySummary extends StatelessWidget {
                       Text(
                         'Savings Rate',
                         style: AppTextStyles.caption.copyWith(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
 
@@ -238,7 +238,7 @@ class MonthlySummary extends StatelessWidget {
               Text(
                 'Total Transactions',
                 style: AppTextStyles.body2.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
               Text(

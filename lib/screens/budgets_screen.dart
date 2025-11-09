@@ -57,14 +57,14 @@ class BudgetsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFF163473).withOpacity(0.1),
-                    const Color(0xFF162647).withOpacity(0.1),
+                    const Color(0xFF163473).withValues(alpha: 0.1),
+                    const Color(0xFF162647).withValues(alpha: 0.1),
                   ],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
                 border: Border.all(
-                  color: const Color(0xFF163473).withOpacity(0.2),
+                  color: const Color(0xFF163473).withValues(alpha: 0.2),
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -86,9 +86,11 @@ class BudgetsScreen extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFd2ab17).withOpacity(0.1),
+                          color: const Color(0xFFd2ab17).withValues(alpha: 0.1),
                           border: Border.all(
-                            color: const Color(0xFFd2ab17).withOpacity(0.2),
+                            color: const Color(
+                              0xFFd2ab17,
+                            ).withValues(alpha: 0.2),
                           ),
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -133,7 +135,7 @@ class BudgetsScreen extends StatelessWidget {
                         value: totalSpent / totalLimit,
                         backgroundColor: const Color(
                           0xFF6b7280,
-                        ).withOpacity(0.2),
+                        ).withValues(alpha: 0.2),
                         valueColor: AlwaysStoppedAnimation<Color>(
                           totalSpent > totalLimit
                               ? Colors.red[600]!
@@ -183,9 +185,9 @@ class BudgetsScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFd2ab17).withOpacity(0.05),
+                color: const Color(0xFFd2ab17).withValues(alpha: 0.05),
                 border: Border.all(
-                  color: const Color(0xFFd2ab17).withOpacity(0.2),
+                  color: const Color(0xFFd2ab17).withValues(alpha: 0.2),
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -298,12 +300,12 @@ class BudgetCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(
-          color: _getColorFromString(budget.color).withOpacity(0.2),
+          color: _getColorFromString(budget.color).withValues(alpha: 0.2),
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -317,7 +319,9 @@ class BudgetCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _getColorFromString(budget.color).withOpacity(0.1),
+                  color: _getColorFromString(
+                    budget.color,
+                  ).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -383,7 +387,7 @@ class BudgetCard extends StatelessWidget {
             children: [
               LinearProgressIndicator(
                 value: percentage.clamp(0.0, 1.0),
-                backgroundColor: const Color(0xFF6b7280).withOpacity(0.2),
+                backgroundColor: const Color(0xFF6b7280).withValues(alpha: 0.2),
                 valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                 minHeight: 6,
               ),

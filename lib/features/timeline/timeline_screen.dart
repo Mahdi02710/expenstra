@@ -31,7 +31,7 @@ class _TimelineScreenState extends State<TimelineScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -121,7 +121,8 @@ class _TimelineScreenState extends State<TimelineScreen>
                         child: Text(
                           'View All',
                           style: AppTextStyles.buttonMedium.copyWith(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? AppColors.gold
                                 : AppColors.primary,
                           ),
@@ -164,7 +165,7 @@ class _TimelineScreenState extends State<TimelineScreen>
   Future<void> _onRefresh() async {
     // Simulate refresh delay
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     // In a real app, you would refresh data from the server here
     if (mounted) {
       setState(() {});
@@ -202,9 +203,9 @@ class _TimelineScreenState extends State<TimelineScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Transaction header
           Row(
             children: [
@@ -222,25 +223,19 @@ class _TimelineScreenState extends State<TimelineScreen>
                   ),
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      transaction.description,
-                      style: AppTextStyles.h4,
-                    ),
-                    Text(
-                      transaction.category,
-                      style: AppTextStyles.body2,
-                    ),
+                    Text(transaction.description, style: AppTextStyles.h4),
+                    Text(transaction.category, style: AppTextStyles.body2),
                   ],
                 ),
               ),
-              
+
               Text(
                 transaction.formattedAmountWithSign,
                 style: AppTextStyles.getAmountStyle(
@@ -250,9 +245,9 @@ class _TimelineScreenState extends State<TimelineScreen>
               ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Transaction details
           _buildDetailRow('Date', transaction.formattedDate),
           _buildDetailRow('Time', transaction.formattedTime),
@@ -260,9 +255,9 @@ class _TimelineScreenState extends State<TimelineScreen>
             _buildDetailRow('Note', transaction.note!),
           if (transaction.tags != null && transaction.tags!.isNotEmpty)
             _buildDetailRow('Tags', transaction.tags!.join(', ')),
-          
+
           const SizedBox(height: 24),
-          
+
           // Actions
           Row(
             children: [
@@ -275,9 +270,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                   child: const Text('Edit'),
                 ),
               ),
-              
+
               const SizedBox(width: 12),
-              
+
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
@@ -292,7 +287,7 @@ class _TimelineScreenState extends State<TimelineScreen>
               ),
             ],
           ),
-          
+
           SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
         ],
       ),
@@ -305,19 +300,8 @@ class _TimelineScreenState extends State<TimelineScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: AppTextStyles.body2,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTextStyles.body1,
-            ),
-          ),
+          SizedBox(width: 80, child: Text(label, style: AppTextStyles.body2)),
+          Expanded(child: Text(value, style: AppTextStyles.body1)),
         ],
       ),
     );
@@ -337,10 +321,7 @@ class _TimelineScreenState extends State<TimelineScreen>
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Text(
-              'Search Transactions',
-              style: AppTextStyles.h3,
-            ),
+            Text('Search Transactions', style: AppTextStyles.h3),
             const SizedBox(height: 16),
             TextField(
               decoration: const InputDecoration(
@@ -392,7 +373,9 @@ class _TimelineScreenState extends State<TimelineScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: Text('Are you sure you want to delete "${transaction.description}"?'),
+        content: Text(
+          'Are you sure you want to delete "${transaction.description}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

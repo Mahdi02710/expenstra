@@ -6,10 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 class CategoryBreakdown extends StatelessWidget {
   final Map<String, double> categorySpending;
 
-  const CategoryBreakdown({
-    super.key,
-    required this.categorySpending,
-  });
+  const CategoryBreakdown({super.key, required this.categorySpending});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +14,10 @@ class CategoryBreakdown extends StatelessWidget {
       return _buildEmptyState(context);
     }
 
-    final total = categorySpending.values.fold<double>(0, (sum, value) => sum + value);
+    final total = categorySpending.values.fold<double>(
+      0,
+      (sum, value) => sum + value,
+    );
     final sortedEntries = categorySpending.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
@@ -32,15 +32,15 @@ class CategoryBreakdown extends StatelessWidget {
                 : AppColors.textPrimary,
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         ...sortedEntries.asMap().entries.map((entry) {
           final index = entry.key;
           final category = entry.value.key;
           final amount = entry.value.value;
           final percentage = total > 0 ? (amount / total) : 0.0;
-          
+
           return _buildCategoryItem(
             category: category,
             amount: amount,
@@ -70,16 +70,13 @@ class CategoryBreakdown extends StatelessWidget {
               color: AppColors.primary,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
-          Text(
-            'No spending data',
-            style: AppTextStyles.h4,
-          ),
-          
+
+          Text('No spending data', style: AppTextStyles.h4),
+
           const SizedBox(height: 8),
-          
+
           Text(
             'Your category breakdown will appear here once you start making transactions.',
             style: AppTextStyles.body2,
@@ -97,17 +94,14 @@ class CategoryBreakdown extends StatelessWidget {
     required Color color,
   }) {
     final formatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.1), width: 1),
       ),
       child: Column(
         children: [
@@ -125,18 +119,16 @@ class CategoryBreakdown extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  
+
                   const SizedBox(width: 12),
-                  
+
                   Text(
                     category,
-                    style: AppTextStyles.subtitle1.copyWith(
-                      color: color,
-                    ),
+                    style: AppTextStyles.subtitle1.copyWith(color: color),
                   ),
                 ],
               ),
-              
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -147,25 +139,23 @@ class CategoryBreakdown extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  
+
                   Text(
                     '${(percentage * 100).toStringAsFixed(1)}%',
-                    style: AppTextStyles.caption.copyWith(
-                      color: color,
-                    ),
+                    style: AppTextStyles.caption.copyWith(color: color),
                   ),
                 ],
               ),
             ],
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // Progress bar
           Container(
             height: 6,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(3),
             ),
             child: FractionallySizedBox(
