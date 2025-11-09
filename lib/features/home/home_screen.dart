@@ -40,11 +40,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'label': 'Activity',
       'screen': const ActivityScreen(),
     },
-    {
-      'icon': Icons.more_horiz,
-      'label': 'More',
-      'screen': const MoreScreen(),
-    },
+    {'icon': Icons.more_horiz, 'label': 'More', 'screen': const MoreScreen()},
   ];
 
   @override
@@ -74,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
       );
-      
+
       // Trigger animation for visual feedback
       _bottomNavAnimationController.forward().then((_) {
         _bottomNavAnimationController.reverse();
@@ -131,21 +127,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             icon: tab['icon'] as IconData,
                             isActive: isActive,
                             size: 24.0,
-                            animationDuration: const Duration(milliseconds: 300),
+                            animationDuration: const Duration(
+                              milliseconds: 300,
+                            ),
                           ),
-                          
+
                           const SizedBox(height: 4),
-                          
+
                           // Tab label
                           AnimatedDefaultTextStyle(
                             duration: const Duration(milliseconds: 200),
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: isActive
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                               color: isActive
-                                  ? (Theme.of(context).brightness == Brightness.dark
-                                      ? AppColors.gold
-                                      : AppColors.primary)
+                                  ? (Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? AppColors.gold
+                                        : AppColors.primary)
                                   : AppColors.textMuted,
                             ),
                             child: Text(
@@ -155,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          
+
                           // Active indicator
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
@@ -164,9 +165,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             margin: const EdgeInsets.only(top: 4),
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? (Theme.of(context).brightness == Brightness.dark
-                                      ? AppColors.gold
-                                      : AppColors.primary)
+                                  ? (Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? AppColors.gold
+                                        : AppColors.primary)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(1),
                             ),

@@ -252,7 +252,7 @@ class BudgetsScreen extends StatelessWidget {
 }
 
 // Top-level helper to convert simple color names (or hex strings) to Color.
-Color _getColorFromString(String colorString) {
+/*Color _getColorFromString(String colorString) {
   final s = colorString.trim().toLowerCase();
   switch (s) {
     case 'blue':
@@ -276,7 +276,7 @@ Color _getColorFromString(String colorString) {
       }
       return const Color(0xFF163473);
   }
-}
+}*/
 
 class BudgetCard extends StatelessWidget {
   final Budget budget;
