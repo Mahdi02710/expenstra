@@ -65,21 +65,23 @@ class _WalletsOverviewState extends State<WalletsOverview> {
                         : AppColors.textPrimary,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: (isDark ? AppColors.gold : AppColors.primary)
-                        .withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${widget.walletCount} WALLETS',
-                    style: AppTextStyles.caption.copyWith(
-                      color: isDark ? AppColors.gold : AppColors.primary,
-                      fontWeight: FontWeight.w600,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (isDark ? AppColors.gold : AppColors.primary)
+                          .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${widget.walletCount} WALLETS',
+                      style: AppTextStyles.caption.copyWith(
+                        color: isDark ? AppColors.gold : AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),

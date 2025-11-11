@@ -237,30 +237,36 @@ class _WalletCardState extends State<WalletCard>
                         const Spacer(),
 
                         // Balance
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.wallet.balanceStatus,
-                              style: AppTextStyles.caption.copyWith(
-                                color: isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.textSecondary,
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize
+                                .min, // important to avoid unnecessary expansion
+                            children: [
+                              Text(
+                                widget.wallet.balanceStatus,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: isDark
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.textSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
 
-                            const SizedBox(height: 2),
+                              const SizedBox(height: 2),
 
-                            Text(
-                              widget.wallet.formattedBalanceWithSign,
-                              style: AppTextStyles.subtitle1.copyWith(
-                                color: _getBalanceColor(),
-                                fontWeight: FontWeight.w700,
+                              Text(
+                                widget.wallet.formattedBalanceWithSign,
+                                style: AppTextStyles.subtitle1.copyWith(
+                                  color: _getBalanceColor(),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
