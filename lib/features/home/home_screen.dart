@@ -51,6 +51,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+
+    // 🧠 Fix: force a rebuild after the first frame so layout adjusts correctly
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -80,7 +85,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(
+      context,
+    ).padding.bottom; // ✅ dynamic safe area
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) {
@@ -91,6 +100,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         children: _tabs.map((tab) => tab['screen'] as Widget).toList(),
       ),
       bottomNavigationBar: Container(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          bottom: bottomPadding > 0 ? bottomPadding : 8,
+          top: 8,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           boxShadow: [
@@ -101,86 +116,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ],
         ),
-        child: SafeArea(
-          child: Container(
-            height: 80,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: _tabs.asMap().entries.map((entry) {
-                final index = entry.key;
-                final tab = entry.value;
-                final isActive = _currentIndex == index;
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: _tabs.asMap().entries.map((entry) {
+            final index = entry.key;
+            final tab = entry.value;
+            final isActive = _currentIndex == index;
 
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => _onTabTapped(index),
-                    behavior: HitTestBehavior.opaque,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Custom half icon with animation
-                          HalfIcon(
-                            icon: tab['icon'] as IconData,
-                            isActive: isActive,
-                            size: 24.0,
-                            animationDuration: const Duration(
-                              milliseconds: 300,
-                            ),
-                          ),
-
-                          const SizedBox(height: 4),
-
-                          // Tab label
-                          AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 200),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isActive
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: isActive
-                                  ? (Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? AppColors.gold
-                                        : AppColors.primary)
-                                  : AppColors.textMuted,
-                            ),
-                            child: Text(
-                              tab['label'] as String,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-
-                          // Active indicator
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: isActive ? 20 : 0,
-                            height: 2,
-                            margin: const EdgeInsets.only(top: 4),
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? (Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? AppColors.gold
-                                        : AppColors.primary)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ),
-                        ],
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => _onTabTapped(index),
+                behavior: HitTestBehavior.opaque,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    HalfIcon(
+                      icon: tab['icon'] as IconData,
+                      isActive: isActive,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      tab['label'] as String,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: isActive
+                            ? (Theme.of(context).brightness == Brightness.dark
+                                  ? AppColors.gold
+                                  : AppColors.primary)
+                            : AppColors.textMuted,
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ),
     );

@@ -4,7 +4,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/transaction.dart';
 import '../../../data/services/data_service.dart';
 
-class TransactionList extends StatelessWidget {
+class TransactionList extends StatefulWidget {
   final List<Transaction> transactions;
   final Function(Transaction) onTransactionTap;
 
@@ -15,7 +15,30 @@ class TransactionList extends StatelessWidget {
   });
 
   @override
+  State<TransactionList> createState() => _TransactionListState();
+}
+
+class _TransactionListState extends State<TransactionList> {
+  bool _mountedAfterFirstFrame = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Schedule rebuild after first frame to fix overflow on restart
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _mountedAfterFirstFrame = true);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_mountedAfterFirstFrame) {
+      return const SizedBox.shrink();
+    }
+
+    final transactions = widget.transactions;
     if (transactions.isEmpty) {
       return _buildEmptyState(context);
     }
@@ -69,7 +92,7 @@ class TransactionList extends StatelessWidget {
             ...dayTransactions.map(
               (transaction) => TransactionItem(
                 transaction: transaction,
-                onTap: () => onTransactionTap(transaction),
+                onTap: () => widget.onTransactionTap(transaction),
               ),
             ),
 
@@ -98,13 +121,9 @@ class TransactionList extends StatelessWidget {
               color: AppColors.primary,
             ),
           ),
-
           const SizedBox(height: 16),
-
           Text('No transactions yet', style: AppTextStyles.h4),
-
           const SizedBox(height: 8),
-
           Text(
             'Your transactions will appear here once you start adding them.',
             style: AppTextStyles.body2,
@@ -148,8 +167,10 @@ class TransactionItem extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
+          crossAxisAlignment:
+              CrossAxisAlignment.start, // prevents height overflow
           children: [
-            // Transaction icon
+            // Icon
             Container(
               width: 48,
               height: 48,
@@ -164,7 +185,6 @@ class TransactionItem extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(width: 16),
 
             // Transaction details
@@ -178,26 +198,34 @@ class TransactionItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-
                   const SizedBox(height: 2),
-
                   Row(
                     children: [
-                      Text(transaction.category, style: AppTextStyles.body2),
-
+                      Flexible(
+                        child: Text(
+                          transaction.category,
+                          style: AppTextStyles.body2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       if (wallet != null) ...[
                         Text(' • ', style: AppTextStyles.body2),
-                        Text(wallet.name, style: AppTextStyles.body2),
+                        Flexible(
+                          child: Text(
+                            wallet.name,
+                            style: AppTextStyles.body2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ],
                   ),
                 ],
               ),
             ),
-
             const SizedBox(width: 16),
 
-            // Amount and time
+            // Amount & time
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -208,9 +236,7 @@ class TransactionItem extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-
                 const SizedBox(height: 2),
-
                 Text(transaction.timeAgo, style: AppTextStyles.caption),
               ],
             ),
