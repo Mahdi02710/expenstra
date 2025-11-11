@@ -182,114 +182,119 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   Widget _buildTransactionDetailSheet(Transaction transaction) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.textMuted,
-                borderRadius: BorderRadius.circular(2),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textMuted,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Transaction header
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryWithOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    transaction.icon,
-                    style: const TextStyle(fontSize: 24),
+            // Transaction header
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryWithOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      transaction.icon,
+                      style: const TextStyle(fontSize: 24),
+                    ),
                   ),
                 ),
-              ),
 
-              const SizedBox(width: 16),
+                const SizedBox(width: 16),
 
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(transaction.description, style: AppTextStyles.h4),
-                    Text(transaction.category, style: AppTextStyles.body2),
-                  ],
-                ),
-              ),
-
-              Text(
-                transaction.formattedAmountWithSign,
-                style: AppTextStyles.getAmountStyle(
-                  transaction.isIncome,
-                  fontSize: 20,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Transaction details
-          _buildDetailRow('Date', transaction.formattedDate),
-          _buildDetailRow('Time', transaction.formattedTime),
-          if (transaction.note != null)
-            _buildDetailRow('Note', transaction.note!),
-          if (transaction.tags != null && transaction.tags!.isNotEmpty)
-            _buildDetailRow('Tags', transaction.tags!.join(', ')),
-
-          const SizedBox(height: 24),
-
-          // Actions
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _editTransaction(transaction);
-                  },
-                  child: const Text('Edit'),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _deleteTransaction(transaction);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(transaction.description, style: AppTextStyles.h4),
+                      Text(transaction.category, style: AppTextStyles.body2),
+                    ],
                   ),
-                  child: const Text('Delete'),
                 ),
-              ),
-            ],
-          ),
 
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-        ],
+                Text(
+                  transaction.formattedAmountWithSign,
+                  style: AppTextStyles.getAmountStyle(
+                    transaction.isIncome,
+                    fontSize: 20,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Transaction details
+            _buildDetailRow('Date', transaction.formattedDate),
+            _buildDetailRow('Time', transaction.formattedTime),
+            if (transaction.note != null)
+              _buildDetailRow('Note', transaction.note!),
+            if (transaction.tags != null && transaction.tags!.isNotEmpty)
+              _buildDetailRow('Tags', transaction.tags!.join(', ')),
+
+            const SizedBox(height: 24),
+
+            // Actions
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _editTransaction(transaction);
+                    },
+                    child: const Text('Edit'),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _deleteTransaction(transaction);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.error,
+                    ),
+                    child: const Text('Delete'),
+                  ),
+                ),
+              ],
+            ),
+
+            // we already handle viewInsets via the scrollable padding above
+          ],
+        ),
       ),
     );
   }

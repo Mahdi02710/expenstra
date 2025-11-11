@@ -35,20 +35,24 @@ class TransactionList extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date header
+            // Date header — ensure the left label can't push the right total off-screen
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    dateLabel,
-                    style: AppTextStyles.subtitle1.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppColors.darkTextSecondary
-                          : AppColors.textSecondary,
+                  Expanded(
+                    child: Text(
+                      dateLabel,
+                      style: AppTextStyles.subtitle1.copyWith(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     _getDayTotal(dayTransactions),
                     style: AppTextStyles.subtitle2.copyWith(
