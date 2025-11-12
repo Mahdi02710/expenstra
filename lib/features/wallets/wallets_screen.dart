@@ -200,12 +200,13 @@ class _WalletsScreenState extends State<WalletsScreen>
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 2.5,
+        childAspectRatio: 1.1,
       ),
+
       itemCount: actions.length,
       itemBuilder: (context, index) {
         final action = actions[index];
