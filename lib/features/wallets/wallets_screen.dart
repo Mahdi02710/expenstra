@@ -45,7 +45,7 @@ class _WalletsScreenState extends State<WalletsScreen>
                 floating: true,
                 snap: true,
                 elevation: 0,
-                backgroundColor: Colors.transparent,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 title: Text(
                   'Wallets',
                   style: AppTextStyles.h2.copyWith(

@@ -45,7 +45,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                 floating: true,
                 snap: true,
                 elevation: 0,
-                backgroundColor: Colors.transparent,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 title: Text(
                   'Budgets',
                   style: AppTextStyles.h2.copyWith(

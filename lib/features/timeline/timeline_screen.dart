@@ -47,7 +47,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                 floating: true,
                 snap: true,
                 elevation: 0,
-                backgroundColor: Colors.transparent,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 title: Text(
                   'Timeline',
                   style: AppTextStyles.h2.copyWith(

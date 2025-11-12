@@ -22,13 +22,15 @@ class WalletGrid extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
+        padding: EdgeInsets.zero,
         shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
+        physics:
+            const NeverScrollableScrollPhysics(), // grid won't scroll on its own
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 1.2,
+          childAspectRatio: 1.1, // perfect balance between width & height
         ),
         itemCount: wallets.length,
         itemBuilder: (context, index) {
@@ -39,6 +41,13 @@ class WalletGrid extends StatelessWidget {
         },
       ),
     );
+  }
+
+  double _calculateMaxHeight(int itemCount) {
+    final rows = (itemCount / 2).ceil(); // Calculate number of rows
+    const itemHeight = 140; // Approximate height of each card
+    const spacing = 16.0;
+    return (rows * itemHeight) + ((rows - 1) * spacing);
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -237,36 +246,34 @@ class _WalletCardState extends State<WalletCard>
                         const Spacer(),
 
                         // Balance
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize
-                                .min, // important to avoid unnecessary expansion
-                            children: [
-                              Text(
-                                widget.wallet.balanceStatus,
-                                style: AppTextStyles.caption.copyWith(
-                                  color: isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.textSecondary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                        const Spacer(),
 
-                              const SizedBox(height: 2),
-
-                              Text(
-                                widget.wallet.formattedBalanceWithSign,
-                                style: AppTextStyles.subtitle1.copyWith(
-                                  color: _getBalanceColor(),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                        // Balance
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.wallet.balanceStatus,
+                              style: AppTextStyles.caption.copyWith(
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
                               ),
-                            ],
-                          ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.wallet.formattedBalanceWithSign,
+                              style: AppTextStyles.subtitle1.copyWith(
+                                color: _getBalanceColor(),
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ],
                     ),

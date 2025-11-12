@@ -59,7 +59,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                 floating: true,
                 snap: true,
                 elevation: 0,
-                backgroundColor: Colors.transparent,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 title: Text(
                   'Activity',
                   style: AppTextStyles.h2.copyWith(
