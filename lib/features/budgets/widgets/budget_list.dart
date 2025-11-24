@@ -22,12 +22,14 @@ class BudgetList extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
-        children: budgets.map((budget) => 
-          BudgetCard(
-            budget: budget,
-            onTap: () => onBudgetTap(budget.id),
-          ),
-        ).toList(),
+        children: budgets
+            .map(
+              (budget) => BudgetCard(
+                budget: budget,
+                onTap: () => onBudgetTap(budget.id),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -50,16 +52,13 @@ class BudgetList extends StatelessWidget {
               color: AppColors.primary,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
-          Text(
-            'No budgets yet',
-            style: AppTextStyles.h4,
-          ),
-          
+
+          Text('No budgets yet', style: AppTextStyles.h4),
+
           const SizedBox(height: 8),
-          
+
           Text(
             'Create your first budget to start tracking your spending goals.',
             style: AppTextStyles.body2,
@@ -75,11 +74,7 @@ class BudgetCard extends StatefulWidget {
   final Budget budget;
   final VoidCallback onTap;
 
-  const BudgetCard({
-    super.key,
-    required this.budget,
-    required this.onTap,
-  });
+  const BudgetCard({super.key, required this.budget, required this.onTap});
 
   @override
   State<BudgetCard> createState() => _BudgetCardState();
@@ -97,13 +92,9 @@ class _BudgetCardState extends State<BudgetCard>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.98,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -115,7 +106,7 @@ class _BudgetCardState extends State<BudgetCard>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTapDown: (_) => _animationController.forward(),
       onTapUp: (_) => _animationController.reverse(),
@@ -132,14 +123,11 @@ class _BudgetCardState extends State<BudgetCard>
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _getBorderColor(),
-                  width: 1,
-                ),
+                border: Border.all(color: _getBorderColor(), width: 1),
                 boxShadow: [
                   if (widget.budget.isOverBudget)
                     BoxShadow(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -156,7 +144,7 @@ class _BudgetCardState extends State<BudgetCard>
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: _getStatusColor().withOpacity(0.1),
+                          color: _getStatusColor().withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
@@ -166,9 +154,9 @@ class _BudgetCardState extends State<BudgetCard>
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(width: 16),
-                      
+
                       // Budget info
                       Expanded(
                         child: Column(
@@ -180,7 +168,9 @@ class _BudgetCardState extends State<BudgetCard>
                                   child: Text(
                                     widget.budget.name,
                                     style: AppTextStyles.subtitle1.copyWith(
-                                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                                      color: isDark
+                                          ? AppColors.darkTextPrimary
+                                          : AppColors.textPrimary,
                                     ),
                                   ),
                                 ),
@@ -190,9 +180,9 @@ class _BudgetCardState extends State<BudgetCard>
                                 ),
                               ],
                             ),
-                            
+
                             const SizedBox(height: 2),
-                            
+
                             Text(
                               '${widget.budget.category} • ${widget.budget.periodShortLabel}',
                               style: AppTextStyles.body2,
@@ -202,9 +192,9 @@ class _BudgetCardState extends State<BudgetCard>
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Progress section
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,14 +216,16 @@ class _BudgetCardState extends State<BudgetCard>
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // Progress bar
                       Container(
                         height: 6,
                         decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkBorder : AppColors.border,
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : AppColors.border,
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: FractionallySizedBox(
@@ -247,9 +239,9 @@ class _BudgetCardState extends State<BudgetCard>
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // Status and progress info
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -269,22 +261,26 @@ class _BudgetCardState extends State<BudgetCard>
                       ),
                     ],
                   ),
-                  
+
                   // Status message
-                  if (widget.budget.isOverBudget || widget.budget.isNearLimit) ...[
+                  if (widget.budget.isOverBudget ||
+                      widget.budget.isNearLimit) ...[
                     const SizedBox(height: 12),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: _getStatusColor().withOpacity(0.1),
+                        color: _getStatusColor().withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            widget.budget.isOverBudget 
-                                ? Icons.error_outline 
+                            widget.budget.isOverBudget
+                                ? Icons.error_outline
                                 : Icons.warning_amber_outlined,
                             color: _getStatusColor(),
                             size: 16,
@@ -325,9 +321,9 @@ class _BudgetCardState extends State<BudgetCard>
 
   Color _getBorderColor() {
     if (widget.budget.isOverBudget) {
-      return AppColors.error.withOpacity(0.3);
+      return AppColors.error.withValues(alpha: 0.3);
     } else if (widget.budget.isNearLimit) {
-      return AppColors.warning.withOpacity(0.3);
+      return AppColors.warning.withValues(alpha: 0.3);
     } else {
       return Theme.of(context).dividerColor;
     }

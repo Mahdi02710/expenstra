@@ -31,7 +31,7 @@ class _TimelineScreenState extends State<TimelineScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -47,7 +47,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                 floating: true,
                 snap: true,
                 elevation: 0,
-                backgroundColor: Colors.transparent,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 title: Text(
                   'Timeline',
                   style: AppTextStyles.h2.copyWith(
@@ -121,7 +121,8 @@ class _TimelineScreenState extends State<TimelineScreen>
                         child: Text(
                           'View All',
                           style: AppTextStyles.buttonMedium.copyWith(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? AppColors.gold
                                 : AppColors.primary,
                           ),
@@ -164,7 +165,7 @@ class _TimelineScreenState extends State<TimelineScreen>
   Future<void> _onRefresh() async {
     // Simulate refresh delay
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     // In a real app, you would refresh data from the server here
     if (mounted) {
       setState(() {});
@@ -181,120 +182,119 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   Widget _buildTransactionDetailSheet(Transaction transaction) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.textMuted,
-                borderRadius: BorderRadius.circular(2),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textMuted,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Transaction header
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryWithOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    transaction.icon,
-                    style: const TextStyle(fontSize: 24),
+
+            const SizedBox(height: 24),
+
+            // Transaction header
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryWithOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      transaction.icon,
+                      style: const TextStyle(fontSize: 24),
+                    ),
                   ),
                 ),
-              ),
-              
-              const SizedBox(width: 16),
-              
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      transaction.description,
-                      style: AppTextStyles.h4,
-                    ),
-                    Text(
-                      transaction.category,
-                      style: AppTextStyles.body2,
-                    ),
-                  ],
-                ),
-              ),
-              
-              Text(
-                transaction.formattedAmountWithSign,
-                style: AppTextStyles.getAmountStyle(
-                  transaction.isIncome,
-                  fontSize: 20,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Transaction details
-          _buildDetailRow('Date', transaction.formattedDate),
-          _buildDetailRow('Time', transaction.formattedTime),
-          if (transaction.note != null)
-            _buildDetailRow('Note', transaction.note!),
-          if (transaction.tags != null && transaction.tags!.isNotEmpty)
-            _buildDetailRow('Tags', transaction.tags!.join(', ')),
-          
-          const SizedBox(height: 24),
-          
-          // Actions
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _editTransaction(transaction);
-                  },
-                  child: const Text('Edit'),
-                ),
-              ),
-              
-              const SizedBox(width: 12),
-              
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _deleteTransaction(transaction);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
+
+                const SizedBox(width: 16),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(transaction.description, style: AppTextStyles.h4),
+                      Text(transaction.category, style: AppTextStyles.body2),
+                    ],
                   ),
-                  child: const Text('Delete'),
                 ),
-              ),
-            ],
-          ),
-          
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-        ],
+
+                Text(
+                  transaction.formattedAmountWithSign,
+                  style: AppTextStyles.getAmountStyle(
+                    transaction.isIncome,
+                    fontSize: 20,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Transaction details
+            _buildDetailRow('Date', transaction.formattedDate),
+            _buildDetailRow('Time', transaction.formattedTime),
+            if (transaction.note != null)
+              _buildDetailRow('Note', transaction.note!),
+            if (transaction.tags != null && transaction.tags!.isNotEmpty)
+              _buildDetailRow('Tags', transaction.tags!.join(', ')),
+
+            const SizedBox(height: 24),
+
+            // Actions
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _editTransaction(transaction);
+                    },
+                    child: const Text('Edit'),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _deleteTransaction(transaction);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.error,
+                    ),
+                    child: const Text('Delete'),
+                  ),
+                ),
+              ],
+            ),
+
+            // we already handle viewInsets via the scrollable padding above
+          ],
+        ),
       ),
     );
   }
@@ -305,19 +305,8 @@ class _TimelineScreenState extends State<TimelineScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: AppTextStyles.body2,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTextStyles.body1,
-            ),
-          ),
+          SizedBox(width: 80, child: Text(label, style: AppTextStyles.body2)),
+          Expanded(child: Text(value, style: AppTextStyles.body1)),
         ],
       ),
     );
@@ -337,10 +326,7 @@ class _TimelineScreenState extends State<TimelineScreen>
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Text(
-              'Search Transactions',
-              style: AppTextStyles.h3,
-            ),
+            Text('Search Transactions', style: AppTextStyles.h3),
             const SizedBox(height: 16),
             TextField(
               decoration: const InputDecoration(
@@ -392,7 +378,9 @@ class _TimelineScreenState extends State<TimelineScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: Text('Are you sure you want to delete "${transaction.description}"?'),
+        content: Text(
+          'Are you sure you want to delete "${transaction.description}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

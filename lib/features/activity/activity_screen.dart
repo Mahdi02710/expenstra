@@ -18,9 +18,14 @@ class _ActivityScreenState extends State<ActivityScreen>
   final DataService _dataService = DataService();
   final ScrollController _scrollController = ScrollController();
   late TabController _tabController;
-  
+
   String _selectedPeriod = 'This Month';
-  final List<String> _periods = ['This Week', 'This Month', 'Last 3 Months', 'This Year'];
+  final List<String> _periods = [
+    'This Week',
+    'This Month',
+    'Last 3 Months',
+    'This Year',
+  ];
 
   @override
   bool get wantKeepAlive => true;
@@ -41,7 +46,7 @@ class _ActivityScreenState extends State<ActivityScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -54,7 +59,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                 floating: true,
                 snap: true,
                 elevation: 0,
-                backgroundColor: Colors.transparent,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 title: Text(
                   'Activity',
                   style: AppTextStyles.h2.copyWith(
@@ -72,12 +77,12 @@ class _ActivityScreenState extends State<ActivityScreen>
                         _selectedPeriod = period;
                       });
                     },
-                    itemBuilder: (context) => _periods.map((period) =>
-                      PopupMenuItem(
-                        value: period,
-                        child: Text(period),
-                      ),
-                    ).toList(),
+                    itemBuilder: (context) => _periods
+                        .map(
+                          (period) =>
+                              PopupMenuItem(value: period, child: Text(period)),
+                        )
+                        .toList(),
                   ),
                   IconButton(
                     icon: const Icon(Icons.insights),
@@ -101,7 +106,8 @@ class _ActivityScreenState extends State<ActivityScreen>
                         ? AppColors.gold
                         : AppColors.primary,
                     unselectedLabelColor: AppColors.textMuted,
-                    indicatorColor: Theme.of(context).brightness == Brightness.dark
+                    indicatorColor:
+                        Theme.of(context).brightness == Brightness.dark
                         ? AppColors.gold
                         : AppColors.primary,
                   ),
@@ -133,13 +139,17 @@ class _ActivityScreenState extends State<ActivityScreen>
           children: [
             // Monthly Summary
             MonthlySummary(
-              income: _dataService.getTotalIncome(period: const Duration(days: 30)),
-              expenses: _dataService.getTotalExpenses(period: const Duration(days: 30)),
+              income: _dataService.getTotalIncome(
+                period: const Duration(days: 30),
+              ),
+              expenses: _dataService.getTotalExpenses(
+                period: const Duration(days: 30),
+              ),
               transactions: _dataService.getTransactionsThisMonth(),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Spending Chart
             Text(
               'Spending Overview',
@@ -149,20 +159,20 @@ class _ActivityScreenState extends State<ActivityScreen>
                     : AppColors.textPrimary,
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             SpendingChart(
               spendingData: _dataService.getSpendingByCategory(
                 period: const Duration(days: 30),
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Quick Stats
             _buildQuickStats(),
-            
+
             const SizedBox(height: 100),
           ],
         ),
@@ -200,15 +210,15 @@ class _ActivityScreenState extends State<ActivityScreen>
                   : AppColors.textPrimary,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildTrendChart(),
-          
+
           const SizedBox(height: 24),
-          
+
           _buildTrendInsights(),
-          
+
           const SizedBox(height: 100),
         ],
       ),
@@ -218,9 +228,10 @@ class _ActivityScreenState extends State<ActivityScreen>
   Widget _buildQuickStats() {
     final transactions = _dataService.getTransactionsThisMonth();
     final averageTransaction = transactions.isNotEmpty
-        ? transactions.fold<double>(0, (sum, t) => sum + t.amount) / transactions.length
+        ? transactions.fold<double>(0, (sum, t) => sum + t.amount) /
+              transactions.length
         : 0.0;
-    
+
     final stats = [
       {
         'title': 'Transactions',
@@ -263,9 +274,9 @@ class _ActivityScreenState extends State<ActivityScreen>
                 : AppColors.textPrimary,
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -281,10 +292,10 @@ class _ActivityScreenState extends State<ActivityScreen>
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: (stat['color'] as Color).withOpacity(0.1),
+                color: (stat['color'] as Color).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: (stat['color'] as Color).withOpacity(0.2),
+                  color: (stat['color'] as Color).withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -295,7 +306,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: (stat['color'] as Color).withOpacity(0.2),
+                      color: (stat['color'] as Color).withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -304,23 +315,23 @@ class _ActivityScreenState extends State<ActivityScreen>
                       size: 16,
                     ),
                   ),
-                  
+
                   const Spacer(),
-                  
+
                   Text(
                     stat['value'] as String,
                     style: AppTextStyles.h3.copyWith(
                       color: stat['color'] as Color,
                     ),
                   ),
-                  
+
                   Text(
                     stat['title'] as String,
                     style: AppTextStyles.body2.copyWith(
                       color: stat['color'] as Color,
                     ),
                   ),
-                  
+
                   Text(
                     stat['subtitle'] as String,
                     style: AppTextStyles.caption,
@@ -343,9 +354,7 @@ class _ActivityScreenState extends State<ActivityScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
-      child: const Center(
-        child: Text('Trend chart would go here'),
-      ),
+      child: const Center(child: Text('Trend chart would go here')),
     );
   }
 
@@ -361,27 +370,27 @@ class _ActivityScreenState extends State<ActivityScreen>
                 : AppColors.textPrimary,
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         _buildInsightCard(
           icon: Icons.trending_down,
           title: 'Spending Decreased',
           subtitle: 'You spent 15% less this month compared to last month',
           color: AppColors.income,
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         _buildInsightCard(
           icon: Icons.category,
           title: 'Top Category',
           subtitle: 'Food & Dining accounts for 35% of your spending',
           color: AppColors.primary,
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         _buildInsightCard(
           icon: Icons.schedule,
           title: 'Peak Spending Time',
@@ -401,12 +410,9 @@ class _ActivityScreenState extends State<ActivityScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
         children: [
@@ -414,35 +420,26 @@ class _ActivityScreenState extends State<ActivityScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 20,
-            ),
+            child: Icon(icon, color: color, size: 20),
           ),
-          
+
           const SizedBox(width: 16),
-          
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: AppTextStyles.subtitle1.copyWith(
-                    color: color,
-                  ),
+                  style: AppTextStyles.subtitle1.copyWith(color: color),
                 ),
-                
+
                 const SizedBox(height: 2),
-                
-                Text(
-                  subtitle,
-                  style: AppTextStyles.body2,
-                ),
+
+                Text(subtitle, style: AppTextStyles.body2),
               ],
             ),
           ),
@@ -475,7 +472,11 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: tabBar,

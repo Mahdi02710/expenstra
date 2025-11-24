@@ -29,7 +29,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -45,7 +45,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                 floating: true,
                 snap: true,
                 elevation: 0,
-                backgroundColor: Colors.transparent,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 title: Text(
                   'Budgets',
                   style: AppTextStyles.h2.copyWith(
@@ -74,10 +74,12 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                   child: BudgetsOverview(
                     budgets: _dataService.budgets,
                     totalBudgetAmount: _dataService.budgets.fold(
-                      0.0, (sum, budget) => sum + budget.limit,
+                      0.0,
+                      (sum, budget) => sum + budget.limit,
                     ),
                     totalSpent: _dataService.budgets.fold(
-                      0.0, (sum, budget) => sum + budget.spent,
+                      0.0,
+                      (sum, budget) => sum + budget.spent,
                     ),
                   ),
                 ),
@@ -105,7 +107,8 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                         child: Text(
                           'Templates',
                           style: AppTextStyles.buttonMedium.copyWith(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? AppColors.gold
                                 : AppColors.primary,
                           ),
@@ -128,7 +131,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
 
               // Quick Tips Section
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
-              
+
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -188,61 +191,63 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                 : AppColors.textPrimary,
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
-        ...tips.map((tip) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: (tip['color'] as Color).withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: (tip['color'] as Color).withOpacity(0.1),
-              width: 1,
+
+        ...tips.map(
+          (tip) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: (tip['color'] as Color).withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: (tip['color'] as Color).withValues(alpha: 0.1),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: (tip['color'] as Color).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    tip['icon'] as IconData,
+                    color: tip['color'] as Color,
+                    size: 20,
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tip['title'] as String,
+                        style: AppTextStyles.subtitle1.copyWith(
+                          color: tip['color'] as Color,
+                        ),
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      Text(
+                        tip['subtitle'] as String,
+                        style: AppTextStyles.body2,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: (tip['color'] as Color).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  tip['icon'] as IconData,
-                  color: tip['color'] as Color,
-                  size: 20,
-                ),
-              ),
-              
-              const SizedBox(width: 16),
-              
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tip['title'] as String,
-                      style: AppTextStyles.subtitle1.copyWith(
-                        color: tip['color'] as Color,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 2),
-                    
-                    Text(
-                      tip['subtitle'] as String,
-                      style: AppTextStyles.body2,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        )),
+        ),
       ],
     );
   }
@@ -300,21 +305,15 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
-                  Text(
-                    budget.name,
-                    style: AppTextStyles.h2,
-                  ),
-                  
-                  Text(
-                    budget.periodLabel,
-                    style: AppTextStyles.body2,
-                  ),
-                  
+
+                  Text(budget.name, style: AppTextStyles.h2),
+
+                  Text(budget.periodLabel, style: AppTextStyles.body2),
+
                   const SizedBox(height: 16),
-                  
+
                   // Progress indicator
                   Column(
                     children: [
@@ -322,23 +321,27 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                         '${budget.formattedSpent} of ${budget.formattedLimit}',
                         style: AppTextStyles.h4,
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       LinearProgressIndicator(
                         value: budget.percentage,
                         backgroundColor: AppColors.border,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          budget.isOverBudget ? AppColors.error : AppColors.primary,
+                          budget.isOverBudget
+                              ? AppColors.error
+                              : AppColors.primary,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       Text(
                         budget.status,
                         style: AppTextStyles.body2.copyWith(
-                          color: budget.isOverBudget ? AppColors.error : AppColors.income,
+                          color: budget.isOverBudget
+                              ? AppColors.error
+                              : AppColors.income,
                         ),
                       ),
                     ],
@@ -356,19 +359,22 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                   children: [
                     _buildBudgetDetailRow('Category', budget.category),
                     _buildBudgetDetailRow('Period', budget.periodShortLabel),
-                    _buildBudgetDetailRow('Remaining', budget.formattedRemaining),
-                    _buildBudgetDetailRow('Progress', budget.formattedPercentage),
-                    _buildBudgetDetailRow('Days Left', budget.daysRemainingText),
+                    _buildBudgetDetailRow(
+                      'Remaining',
+                      budget.formattedRemaining,
+                    ),
+                    _buildBudgetDetailRow(
+                      'Progress',
+                      budget.formattedPercentage,
+                    ),
+                    _buildBudgetDetailRow(
+                      'Days Left',
+                      budget.daysRemainingText,
+                    ),
                     const SizedBox(height: 16),
-                    Text(
-                      'Spending Advice',
-                      style: AppTextStyles.subtitle1,
-                    ),
+                    Text('Spending Advice', style: AppTextStyles.subtitle1),
                     const SizedBox(height: 8),
-                    Text(
-                      budget.spendingAdvice,
-                      style: AppTextStyles.body2,
-                    ),
+                    Text(budget.spendingAdvice, style: AppTextStyles.body2),
                   ],
                 ),
               ),
@@ -385,19 +391,8 @@ class _BudgetsScreenState extends State<BudgetsScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: AppTextStyles.body2,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTextStyles.body1,
-            ),
-          ),
+          SizedBox(width: 100, child: Text(label, style: AppTextStyles.body2)),
+          Expanded(child: Text(value, style: AppTextStyles.body1)),
         ],
       ),
     );
@@ -417,10 +412,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Text(
-              'Create New Budget',
-              style: AppTextStyles.h2,
-            ),
+            Text('Create New Budget', style: AppTextStyles.h2),
             const SizedBox(height: 16),
             const Text('Budget creation form would go here'),
             // Implement actual form

@@ -20,10 +20,17 @@ class BudgetsOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final formatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-    final overallProgress = totalBudgetAmount > 0 ? (totalSpent / totalBudgetAmount).clamp(0.0, 1.0) : 0.0;
-    final remaining = (totalBudgetAmount - totalSpent).clamp(0.0, double.infinity);
+    final overallProgress = totalBudgetAmount > 0
+        ? (totalSpent / totalBudgetAmount).clamp(0.0, 1.0)
+        : 0.0;
+    final remaining = (totalBudgetAmount - totalSpent).clamp(
+      0.0,
+      double.infinity,
+    );
     final overBudgetCount = budgets.where((b) => b.isOverBudget).length;
-    final nearLimitCount = budgets.where((b) => b.isNearLimit && !b.isOverBudget).length;
+    final nearLimitCount = budgets
+        .where((b) => b.isNearLimit && !b.isOverBudget)
+        .length;
 
     return Container(
       width: double.infinity,
@@ -33,7 +40,9 @@ class BudgetsOverview extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? AppColors.gold : AppColors.primary).withOpacity(0.3),
+            color: (isDark ? AppColors.gold : AppColors.primary).withValues(
+              alpha: 0.3,
+            ),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -48,14 +57,15 @@ class BudgetsOverview extends StatelessWidget {
             children: [
               Text(
                 'Budget Overview',
-                style: AppTextStyles.h4.copyWith(
-                  color: Colors.white,
-                ),
+                style: AppTextStyles.h4.copyWith(color: Colors.white),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -68,9 +78,9 @@ class BudgetsOverview extends StatelessWidget {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Overall progress
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,26 +88,26 @@ class BudgetsOverview extends StatelessWidget {
               Text(
                 'Total Budget Progress',
                 style: AppTextStyles.body2.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               Text(
                 '${formatter.format(totalSpent)} of ${formatter.format(totalBudgetAmount)}',
                 style: AppTextStyles.currencyMedium.copyWith(
                   color: Colors.white,
                 ),
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Progress bar
               Container(
                 height: 8,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: FractionallySizedBox(
@@ -111,28 +121,28 @@ class BudgetsOverview extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               Text(
                 '${(overallProgress * 100).toStringAsFixed(1)}% used • ${formatter.format(remaining)} remaining',
                 style: AppTextStyles.caption.copyWith(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Budget status indicators
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -147,7 +157,7 @@ class BudgetsOverview extends StatelessWidget {
                     icon: Icons.check_circle_outline,
                   ),
                 ),
-                
+
                 // Near limit budgets
                 if (nearLimitCount > 0) ...[
                   const SizedBox(width: 16),
@@ -155,12 +165,12 @@ class BudgetsOverview extends StatelessWidget {
                     child: _buildStatusIndicator(
                       count: nearLimitCount,
                       label: 'Near Limit',
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       icon: Icons.warning_amber_outlined,
                     ),
                   ),
                 ],
-                
+
                 // Over budget
                 if (overBudgetCount > 0) ...[
                   const SizedBox(width: 16),
@@ -168,7 +178,7 @@ class BudgetsOverview extends StatelessWidget {
                     child: _buildStatusIndicator(
                       count: overBudgetCount,
                       label: 'Over Budget',
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       icon: Icons.error_outline,
                     ),
                   ),
@@ -192,11 +202,7 @@ class BudgetsOverview extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: 16,
-            ),
+            Icon(icon, color: color, size: 16),
             const SizedBox(width: 4),
             Text(
               count.toString(),
@@ -207,14 +213,12 @@ class BudgetsOverview extends StatelessWidget {
             ),
           ],
         ),
-        
+
         const SizedBox(height: 4),
-        
+
         Text(
           label,
-          style: AppTextStyles.caption.copyWith(
-            color: color,
-          ),
+          style: AppTextStyles.caption.copyWith(color: color),
           textAlign: TextAlign.center,
         ),
       ],

@@ -38,18 +38,12 @@ class _HalfIconState extends State<HalfIcon>
     _scaleAnimation = Tween<double>(
       begin: 0.8,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _fadeAnimation = Tween<double>(
       begin: 0.3,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     if (widget.isActive) {
       _controller.forward();
@@ -77,7 +71,7 @@ class _HalfIconState extends State<HalfIcon>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
@@ -98,10 +92,10 @@ class _HalfIconState extends State<HalfIcon>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: (isDark ? AppColors.gold : AppColors.primary)
-                            .withOpacity(0.1 * _fadeAnimation.value),
+                            .withValues(alpha: 0.1 * _fadeAnimation.value),
                       ),
                     ),
-                  
+
                   // Half-transparent overlay for inactive state
                   ClipRect(
                     child: Stack(
@@ -114,23 +108,27 @@ class _HalfIconState extends State<HalfIcon>
                               ? (isDark ? AppColors.gold : AppColors.primary)
                               : AppColors.textMuted,
                         ),
-                        
+
                         // Half overlay for inactive state
                         if (!widget.isActive)
                           Positioned.fill(
                             child: ClipPath(
                               clipper: HalfClipper(),
                               child: Container(
-                                color: isDark 
-                                    ? AppColors.darkBackground.withOpacity(0.6)
-                                    : AppColors.background.withOpacity(0.6),
+                                color: isDark
+                                    ? AppColors.darkBackground.withValues(
+                                        alpha: 0.6,
+                                      )
+                                    : AppColors.background.withValues(
+                                        alpha: 0.6,
+                                      ),
                               ),
                             ),
                           ),
                       ],
                     ),
                   ),
-                  
+
                   // Shine effect for active state
                   if (widget.isActive)
                     TweenAnimationBuilder<double>(
@@ -138,16 +136,19 @@ class _HalfIconState extends State<HalfIcon>
                       duration: const Duration(milliseconds: 600),
                       builder: (context, value, child) {
                         return Transform.translate(
-                          offset: Offset(-widget.size + (widget.size * 2 * value), 0),
+                          offset: Offset(
+                            -widget.size + (widget.size * 2 * value),
+                            0,
+                          ),
                           child: Container(
                             width: widget.size * 0.3,
                             height: widget.size,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  Colors.white.withOpacity(0.0),
-                                  Colors.white.withOpacity(0.4),
-                                  Colors.white.withOpacity(0.0),
+                                  Colors.white.withValues(alpha: 0.0),
+                                  Colors.white.withValues(alpha: 0.4),
+                                  Colors.white.withValues(alpha: 0.0),
                                 ],
                                 stops: const [0.0, 0.5, 1.0],
                               ),
@@ -199,7 +200,7 @@ class GradientHalfIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return SizedBox(
       width: size,
       height: size,
@@ -224,11 +225,7 @@ class GradientHalfIcon extends StatelessWidget {
             ).createShader(bounds);
           }
         },
-        child: Icon(
-          icon,
-          size: size,
-          color: Colors.white,
-        ),
+        child: Icon(icon, size: size, color: Colors.white),
       ),
     );
   }

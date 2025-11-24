@@ -29,7 +29,7 @@ class _WalletsScreenState extends State<WalletsScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -45,7 +45,7 @@ class _WalletsScreenState extends State<WalletsScreen>
                 floating: true,
                 snap: true,
                 elevation: 0,
-                backgroundColor: Colors.transparent,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 title: Text(
                   'Wallets',
                   style: AppTextStyles.h2.copyWith(
@@ -101,7 +101,8 @@ class _WalletsScreenState extends State<WalletsScreen>
                         child: Text(
                           'Manage',
                           style: AppTextStyles.buttonMedium.copyWith(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? AppColors.gold
                                 : AppColors.primary,
                           ),
@@ -124,7 +125,7 @@ class _WalletsScreenState extends State<WalletsScreen>
 
               // Quick Actions Section
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
-              
+
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -199,12 +200,13 @@ class _WalletsScreenState extends State<WalletsScreen>
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 2.5,
+        childAspectRatio: 1.1,
       ),
+
       itemCount: actions.length,
       itemBuilder: (context, index) {
         final action = actions[index];
@@ -230,12 +232,9 @@ class _WalletsScreenState extends State<WalletsScreen>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withOpacity(0.2),
-            width: 1,
-          ),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
         ),
         child: Row(
           children: [
@@ -243,18 +242,14 @@ class _WalletsScreenState extends State<WalletsScreen>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 20,
-              ),
+              child: Icon(icon, color: color, size: 20),
             ),
-            
+
             const SizedBox(width: 12),
-            
+
             Expanded(
               child: Text(
                 label,
@@ -333,21 +328,15 @@ class _WalletsScreenState extends State<WalletsScreen>
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
-                Text(
-                  wallet.name,
-                  style: AppTextStyles.h2,
-                ),
-                
-                Text(
-                  wallet.typeLabel,
-                  style: AppTextStyles.body2,
-                ),
-                
+
+                Text(wallet.name, style: AppTextStyles.h2),
+
+                Text(wallet.typeLabel, style: AppTextStyles.body2),
+
                 const SizedBox(height: 16),
-                
+
                 Text(
                   wallet.formattedBalanceWithSign,
                   style: AppTextStyles.currencyLarge.copyWith(
@@ -376,7 +365,7 @@ class _WalletsScreenState extends State<WalletsScreen>
                         : AppColors.primary,
                     unselectedLabelColor: AppColors.textMuted,
                   ),
-                  
+
                   Expanded(
                     child: TabBarView(
                       children: [
@@ -405,7 +394,10 @@ class _WalletsScreenState extends State<WalletsScreen>
           _buildDetailRow('Type', wallet.typeLabel),
           _buildDetailRow('Status', wallet.isActive ? 'Active' : 'Inactive'),
           if (wallet.isCredit && wallet.creditLimit != null) ...[
-            _buildDetailRow('Credit Limit', '\$${wallet.creditLimit!.toStringAsFixed(2)}'),
+            _buildDetailRow(
+              'Credit Limit',
+              '\$${wallet.creditLimit!.toStringAsFixed(2)}',
+            ),
             _buildDetailRow('Utilization', wallet.creditUtilizationPercentage),
           ],
           _buildDetailRow('Last Activity', wallet.lastActivityText),
@@ -416,9 +408,7 @@ class _WalletsScreenState extends State<WalletsScreen>
 
   Widget _buildWalletTransactionsTab(List<dynamic> transactions) {
     if (transactions.isEmpty) {
-      return const Center(
-        child: Text('No transactions in this wallet'),
-      );
+      return const Center(child: Text('No transactions in this wallet'));
     }
 
     return ListView.builder(
@@ -427,9 +417,7 @@ class _WalletsScreenState extends State<WalletsScreen>
       itemBuilder: (context, index) {
         final transaction = transactions[index];
         return ListTile(
-          leading: CircleAvatar(
-            child: Text(transaction.icon),
-          ),
+          leading: CircleAvatar(child: Text(transaction.icon)),
           title: Text(transaction.description),
           subtitle: Text(transaction.category),
           trailing: Text(
@@ -447,19 +435,8 @@ class _WalletsScreenState extends State<WalletsScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: AppTextStyles.body2,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTextStyles.body1,
-            ),
-          ),
+          SizedBox(width: 120, child: Text(label, style: AppTextStyles.body2)),
+          Expanded(child: Text(value, style: AppTextStyles.body1)),
         ],
       ),
     );
@@ -480,10 +457,7 @@ class _WalletsScreenState extends State<WalletsScreen>
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Text(
-              'Add New Wallet',
-              style: AppTextStyles.h2,
-            ),
+            Text('Add New Wallet', style: AppTextStyles.h2),
             const SizedBox(height: 16),
             const Text('Wallet creation form would go here'),
             // Implement actual form

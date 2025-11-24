@@ -21,10 +21,7 @@ class QuickActions extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-          width: 1,
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,9 +34,9 @@ class QuickActions extends StatelessWidget {
                   : AppColors.textPrimary,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           Row(
             children: [
               // Add Income
@@ -51,9 +48,9 @@ class QuickActions extends StatelessWidget {
                   onTap: onAddIncome,
                 ),
               ),
-              
+
               const SizedBox(width: 12),
-              
+
               // Add Expense
               Expanded(
                 child: _QuickActionButton(
@@ -63,9 +60,9 @@ class QuickActions extends StatelessWidget {
                   onTap: onAddExpense,
                 ),
               ),
-              
+
               const SizedBox(width: 12),
-              
+
               // Transfer
               Expanded(
                 child: _QuickActionButton(
@@ -114,13 +111,9 @@ class _QuickActionButtonState extends State<_QuickActionButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -144,10 +137,10 @@ class _QuickActionButtonState extends State<_QuickActionButton>
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
               decoration: BoxDecoration(
-                color: widget.color.withOpacity(0.1),
+                color: widget.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: widget.color.withOpacity(0.2),
+                  color: widget.color.withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -157,18 +150,14 @@ class _QuickActionButtonState extends State<_QuickActionButton>
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: widget.color.withOpacity(0.15),
+                      color: widget.color.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      widget.icon,
-                      color: widget.color,
-                      size: 20,
-                    ),
+                    child: Icon(widget.icon, color: widget.color, size: 20),
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   Text(
                     widget.label,
                     style: AppTextStyles.caption.copyWith(

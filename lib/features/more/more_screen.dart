@@ -17,7 +17,7 @@ class _MoreScreenState extends State<MoreScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -39,9 +39,9 @@ class _MoreScreenState extends State<MoreScreen>
                             : AppColors.textPrimary,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     Text(
                       'Settings and additional features',
                       style: AppTextStyles.body2,
@@ -52,9 +52,9 @@ class _MoreScreenState extends State<MoreScreen>
 
               // Profile section
               _buildProfileSection(),
-              
+
               const SizedBox(height: 24),
-              
+
               // Settings sections
               _buildSettingsSection('Account', [
                 _SettingsItem(
@@ -73,12 +73,13 @@ class _MoreScreenState extends State<MoreScreen>
                   icon: Icons.notifications_outlined,
                   title: 'Notifications',
                   subtitle: 'Manage your notification preferences',
-                  onTap: () => _showComingSoon(context, 'Notification Settings'),
+                  onTap: () =>
+                      _showComingSoon(context, 'Notification Settings'),
                 ),
               ]),
-              
+
               const SizedBox(height: 24),
-              
+
               _buildSettingsSection('Preferences', [
                 _SettingsItem(
                   icon: Icons.palette_outlined,
@@ -99,9 +100,9 @@ class _MoreScreenState extends State<MoreScreen>
                   onTap: () => _showComingSoon(context, 'Backup Settings'),
                 ),
               ]),
-              
+
               const SizedBox(height: 24),
-              
+
               _buildSettingsSection('Features', [
                 _SettingsItem(
                   icon: Icons.category_outlined,
@@ -119,12 +120,13 @@ class _MoreScreenState extends State<MoreScreen>
                   icon: Icons.schedule,
                   title: 'Recurring Transactions',
                   subtitle: 'Set up automatic transactions',
-                  onTap: () => _showComingSoon(context, 'Recurring Transactions'),
+                  onTap: () =>
+                      _showComingSoon(context, 'Recurring Transactions'),
                 ),
               ]),
-              
+
               const SizedBox(height: 24),
-              
+
               _buildSettingsSection('Support', [
                 _SettingsItem(
                   icon: Icons.help_outline,
@@ -145,7 +147,7 @@ class _MoreScreenState extends State<MoreScreen>
                   onTap: () => _showAboutDialog(context),
                 ),
               ]),
-              
+
               // Bottom padding for navigation bar
               const SizedBox(height: 100),
             ],
@@ -157,7 +159,7 @@ class _MoreScreenState extends State<MoreScreen>
 
   Widget _buildProfileSection() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(20),
@@ -166,7 +168,9 @@ class _MoreScreenState extends State<MoreScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? AppColors.gold : AppColors.primary).withOpacity(0.3),
+            color: (isDark ? AppColors.gold : AppColors.primary).withValues(
+              alpha: 0.3,
+            ),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -179,22 +183,18 @@ class _MoreScreenState extends State<MoreScreen>
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 30,
-            ),
+            child: const Icon(Icons.person, color: Colors.white, size: 30),
           ),
-          
+
           const SizedBox(width: 16),
-          
+
           // Profile info
           Expanded(
             child: Column(
@@ -202,30 +202,25 @@ class _MoreScreenState extends State<MoreScreen>
               children: [
                 Text(
                   'Welcome Back!',
-                  style: AppTextStyles.h4.copyWith(
-                    color: Colors.white,
-                  ),
+                  style: AppTextStyles.h4.copyWith(color: Colors.white),
                 ),
-                
+
                 const SizedBox(height: 4),
-                
+
                 Text(
                   'Manage your ExpensTra account',
                   style: AppTextStyles.body2.copyWith(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           // Settings button
           IconButton(
             onPressed: () => _showComingSoon(context, 'Profile Settings'),
-            icon: const Icon(
-              Icons.settings,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.settings, color: Colors.white),
           ),
         ],
       ),
@@ -247,9 +242,9 @@ class _MoreScreenState extends State<MoreScreen>
             ),
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
           decoration: BoxDecoration(
@@ -262,7 +257,7 @@ class _MoreScreenState extends State<MoreScreen>
               final index = entry.key;
               final item = entry.value;
               final isLast = index == items.length - 1;
-              
+
               return Column(
                 children: [
                   ListTile(
@@ -270,9 +265,11 @@ class _MoreScreenState extends State<MoreScreen>
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: (Theme.of(context).brightness == Brightness.dark
-                            ? AppColors.gold
-                            : AppColors.primary).withOpacity(0.1),
+                        color:
+                            (Theme.of(context).brightness == Brightness.dark
+                                    ? AppColors.gold
+                                    : AppColors.primary)
+                                .withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -283,21 +280,12 @@ class _MoreScreenState extends State<MoreScreen>
                         size: 20,
                       ),
                     ),
-                    title: Text(
-                      item.title,
-                      style: AppTextStyles.subtitle1,
-                    ),
-                    subtitle: Text(
-                      item.subtitle,
-                      style: AppTextStyles.body2,
-                    ),
-                    trailing: const Icon(
-                      Icons.chevron_right,
-                      size: 20,
-                    ),
+                    title: Text(item.title, style: AppTextStyles.subtitle1),
+                    subtitle: Text(item.subtitle, style: AppTextStyles.body2),
+                    trailing: const Icon(Icons.chevron_right, size: 20),
                     onTap: item.onTap,
                   ),
-                  
+
                   if (!isLast)
                     Divider(
                       height: 1,
@@ -343,25 +331,22 @@ class _MoreScreenState extends State<MoreScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Choose Theme',
-              style: AppTextStyles.h3,
-            ),
-            
+            Text('Choose Theme', style: AppTextStyles.h3),
+
             const SizedBox(height: 24),
-            
+
             ListTile(
               leading: const Icon(Icons.brightness_auto),
               title: const Text('System Default'),
               onTap: () => Navigator.pop(context),
             ),
-            
+
             ListTile(
               leading: const Icon(Icons.light_mode),
               title: const Text('Light Mode'),
               onTap: () => Navigator.pop(context),
             ),
-            
+
             ListTile(
               leading: const Icon(Icons.dark_mode),
               title: const Text('Dark Mode'),
@@ -392,7 +377,9 @@ class _MoreScreenState extends State<MoreScreen>
         ),
       ),
       children: [
-        const Text('A beautiful and intuitive expense tracking app to help you manage your finances.'),
+        const Text(
+          'A beautiful and intuitive expense tracking app to help you manage your finances.',
+        ),
       ],
     );
   }
