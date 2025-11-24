@@ -1,6 +1,7 @@
+import 'package:expensetra/features/home/home_screen.dart';
+import 'package:expensetra/login_page/login_page.dart';
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
-import 'features/home/home_screen.dart';
 
 class ExpensTra extends StatelessWidget {
   const ExpensTra({super.key});
@@ -13,7 +14,7 @@ class ExpensTra extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: const HomeScreen(),
+      home: const LoginPage(),
     );
   }
 }
