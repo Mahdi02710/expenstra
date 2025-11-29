@@ -29,7 +29,7 @@ class WalletGrid extends StatelessWidget {
           maxCrossAxisExtent: 200, // Max width per card
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 1.1, // Adjusted for flexibility
+          childAspectRatio: 1.05, // Adjusted for flexibility
         ),
         itemCount: wallets.length,
         itemBuilder: (context, index) {
