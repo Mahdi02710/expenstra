@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "959459418560",
+    "project_id": "expenstra",
+    "storage_bucket": "expenstra.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:959459418560:android:30cb5b143b4bfff1536825",
+        "android_client_info": {
+          "package_name": "com.example.expensetra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3GNURY1xxzfXvb0qHFB1JuQ2DsmZsuA4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:959459418560:android:a198dbe0fe2e65da536825",
+        "android_client_info": {
+          "package_name": "com.expenstra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3GNURY1xxzfXvb0qHFB1JuQ2DsmZsuA4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
