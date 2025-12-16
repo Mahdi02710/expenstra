@@ -12,18 +12,13 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
 
-tasks.register<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
-}
-
-plugins{
-    id("com.google.gms.google-services") version "4.4.4" apply false
-
-    id("com.android.application")
-
-    id("com.google.gms.google-services")
+plugins {
+    id("com.android.application") apply false
+    id("com.google.gms.google-services") apply false
+    id("dev.flutter.flutter-gradle-plugin") apply false
 }

@@ -1,3 +1,4 @@
+import 'package:expensetra/data/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -14,27 +15,33 @@ class _LoginPageState extends State<LoginPage> {
   bool isLoading = false;
   bool hidePassword = true;
 
+  final AuthService _authService = AuthService();
 
   void login() async {
     setState(() => isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      await _authService.signIn(
+        email: usernameController.text.trim(), // Assuming username is email
+        password: passwordController.text.trim(),
+      );
 
-    // Replace this with your actual database validation
-    if (usernameController.text == "user123" &&
-        passwordController.text == "123456") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Welcome, ${usernameController.text}!")),
-      );
-      // Navigate to home page
-      // Navigator.pushReplacement(...);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid username or password")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Login Successful!")));
+        // Navigation will be handled by the Stream (see Step 3)
+      }
+    } catch (e) {
+      // SHOW REAL ERROR MESSAGES
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
-
-    setState(() => isLoading = false);
   }
 
   @override
@@ -49,10 +56,7 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               const Text(
                 "Welcome to Expense Tracker!",
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
@@ -81,7 +85,8 @@ class _LoginPageState extends State<LoginPage> {
                   labelText: "Password",
                   suffixIcon: IconButton(
                     icon: Icon(
-                        hidePassword ? Icons.visibility : Icons.visibility_off),
+                      hidePassword ? Icons.visibility : Icons.visibility_off,
+                    ),
                     onPressed: () {
                       setState(() => hidePassword = !hidePassword);
                     },
@@ -106,10 +111,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   child: isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          "Login",
-                          style: TextStyle(fontSize: 18),
-                        ),
+                      : const Text("Login", style: TextStyle(fontSize: 18)),
                 ),
               ),
             ],
