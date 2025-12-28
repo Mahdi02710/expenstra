@@ -7,6 +7,8 @@ import 'widgets/balance_card.dart';
 import 'widgets/transaction_list.dart';
 import 'widgets/quick_actions.dart';
 import '../../data/services/firestore_service.dart';
+import 'dart:math';
+import '../../data/services/firestore_service.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -42,6 +44,7 @@ class _TimelineScreenState extends State<TimelineScreen>
           child: CustomScrollView(
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
+
             slivers: [
               // App Bar
               SliverAppBar(
@@ -70,37 +73,6 @@ class _TimelineScreenState extends State<TimelineScreen>
                 ],
               ),
 
-              StreamBuilder<List<Transaction>>(
-                stream: FirestoreService()
-                    .getTransactions(), // Listening to the specific user's DB
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text("No transactions yet. Add one!"),
-                    );
-                  }
-
-                  final transactions = snapshot.data!;
-
-                  // Now return your ListView using 'transactions'
-                  return ListView.builder(
-                    itemCount: transactions.length,
-                    itemBuilder: (context, index) {
-                      final tx = transactions[index];
-                      return ListTile(
-                        title: Text(tx.description),
-                        subtitle: Text(tx.category),
-                        trailing: Text("\$${tx.amount.toStringAsFixed(2)}"),
-                      );
-                    },
-                  );
-                },
-              ),
-
               // Balance Card
               SliverToBoxAdapter(
                 child: Padding(
@@ -118,6 +90,63 @@ class _TimelineScreenState extends State<TimelineScreen>
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+              StreamBuilder<List<Transaction>>(
+                stream: FirestoreService().getTransactions(),
+                builder: (context, snapshot) {
+                  // 1. Loading State (Wrapped in Sliver)
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    );
+                  }
+
+                  // 2. Empty State (Wrapped in Sliver)
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: Center(
+                          child: Text("No transactions yet. Add one!"),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final transactions = snapshot.data!;
+
+                  // 3. Success State (Using SliverList for performance)
+                  return SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final tx = transactions[index];
+                      // Reuse your existing list item design or a simple ListTile
+                      return ListTile(
+                        leading: Text(
+                          tx.icon,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        title: Text(tx.description),
+                        subtitle: Text(tx.dateLabel), // Uses your new helper
+                        trailing: Text(
+                          tx.formattedAmountWithSign,
+                          style: TextStyle(
+                            color: tx.isIncome ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onTap: () =>
+                            _onTransactionTap(tx), // Keep your tap logic
+                      );
+                    }, childCount: transactions.length),
+                  );
+                },
+              ),
+
+              // Add some bottom padding so the FAB doesn't cover the last item
+              const SliverToBoxAdapter(child: SizedBox(height: 80)),
 
               // Quick Actions
               SliverToBoxAdapter(
@@ -381,7 +410,25 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   void _showAddTransactionSheet() {
-    // Implement add transaction sheet
+    final newTx = Transaction(
+      id: '', // Firestore will generate this
+      type: TransactionType.expense,
+      amount: Random().nextDouble() * 100, // Random amount
+      description: "Test Expense ${Random().nextInt(100)}",
+      category: "Food",
+      icon: "🍔",
+      date: DateTime.now(),
+      walletId: "wallet_1", // dummy wallet ID
+    );
+
+    // Call your Firestore Service
+    FirestoreService().addTransaction(newTx).then((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Transaction Added to Firestore!")),
+        );
+      }
+    });
   }
 
   void _showAddIncomeSheet() {
