@@ -6,6 +6,7 @@ import '../../data/models/transaction.dart';
 import 'widgets/balance_card.dart';
 import 'widgets/transaction_list.dart';
 import 'widgets/quick_actions.dart';
+import '../../data/services/firestore_service.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -67,6 +68,37 @@ class _TimelineScreenState extends State<TimelineScreen>
                     onPressed: _showFilterBottomSheet,
                   ),
                 ],
+              ),
+
+              StreamBuilder<List<Transaction>>(
+                stream: FirestoreService()
+                    .getTransactions(), // Listening to the specific user's DB
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Text("No transactions yet. Add one!"),
+                    );
+                  }
+
+                  final transactions = snapshot.data!;
+
+                  // Now return your ListView using 'transactions'
+                  return ListView.builder(
+                    itemCount: transactions.length,
+                    itemBuilder: (context, index) {
+                      final tx = transactions[index];
+                      return ListTile(
+                        title: Text(tx.description),
+                        subtitle: Text(tx.category),
+                        trailing: Text("\$${tx.amount.toStringAsFixed(2)}"),
+                      );
+                    },
+                  );
+                },
               ),
 
               // Balance Card
