@@ -277,67 +277,90 @@ class _ActivityScreenState extends State<ActivityScreen>
 
         const SizedBox(height: 16),
 
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 1.2,
-          ),
-          itemCount: stats.length,
-          itemBuilder: (context, index) {
-            final stat = stats[index];
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: (stat['color'] as Color).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: (stat['color'] as Color).withValues(alpha: 0.2),
-                  width: 1,
-                ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = 2;
+            final crossAxisSpacing = 16.0;
+            final mainAxisSpacing = 16.0;
+            final width = (constraints.maxWidth - crossAxisSpacing) / crossAxisCount;
+            final mainAxisExtent = width * 1.3; // Increased from 1.2 to 1.3 to prevent overflow
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: crossAxisSpacing,
+                mainAxisSpacing: mainAxisSpacing,
+                mainAxisExtent: mainAxisExtent,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
+              itemCount: stats.length,
+              itemBuilder: (context, index) {
+                final stat = stats[index];
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: (stat['color'] as Color).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
                       color: (stat['color'] as Color).withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      stat['icon'] as IconData,
-                      color: stat['color'] as Color,
-                      size: 16,
+                      width: 1,
                     ),
                   ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: (stat['color'] as Color).withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          stat['icon'] as IconData,
+                          color: stat['color'] as Color,
+                          size: 16,
+                        ),
+                      ),
 
-                  const Spacer(),
+                      const Spacer(),
 
-                  Text(
-                    stat['value'] as String,
-                    style: AppTextStyles.h3.copyWith(
-                      color: stat['color'] as Color,
-                    ),
+                      Flexible(
+                        child: Text(
+                          stat['value'] as String,
+                          style: AppTextStyles.h3.copyWith(
+                            color: stat['color'] as Color,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        stat['title'] as String,
+                        style: AppTextStyles.body2.copyWith(
+                          color: stat['color'] as Color,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      Text(
+                        stat['subtitle'] as String,
+                        style: AppTextStyles.caption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-
-                  Text(
-                    stat['title'] as String,
-                    style: AppTextStyles.body2.copyWith(
-                      color: stat['color'] as Color,
-                    ),
-                  ),
-
-                  Text(
-                    stat['subtitle'] as String,
-                    style: AppTextStyles.caption,
-                  ),
-                ],
-              ),
+                );
+              },
             );
           },
         ),

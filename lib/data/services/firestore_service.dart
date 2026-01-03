@@ -18,10 +18,28 @@ class FirestoreService {
         .orderBy('date', descending: true)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => model.Transaction.fromMap(doc.data(), doc.id))
-              .toList(),
-        );
+          (snapshot) {
+            try {
+              return snapshot.docs
+                  .map((doc) {
+                    try {
+                      return model.Transaction.fromMap(doc.data(), doc.id);
+                    } catch (e) {
+                      print('Error parsing transaction ${doc.id}: $e');
+                      return null;
+                    }
+                  })
+                  .whereType<model.Transaction>()
+                  .toList();
+            } catch (e) {
+              print('Error processing transactions: $e');
+              return <model.Transaction>[];
+            }
+          },
+        )
+        .handleError((error) {
+          print('Error loading transactions: $error');
+        });
   }
 
   Future<void> addTransaction(model.Transaction transaction) async {

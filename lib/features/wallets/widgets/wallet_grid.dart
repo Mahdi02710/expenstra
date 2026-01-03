@@ -21,21 +21,31 @@ class WalletGrid extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        padding: EdgeInsets.zero,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 200, // Max width per card
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.05, // Adjusted for flexibility
-        ),
-        itemCount: wallets.length,
-        itemBuilder: (context, index) {
-          return WalletCard(
-            wallet: wallets[index],
-            onTap: () => onWalletTap(wallets[index].id),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final crossAxisCount = 2;
+          final crossAxisSpacing = 16.0;
+          final mainAxisSpacing = 16.0;
+          final width = (constraints.maxWidth - crossAxisSpacing) / crossAxisCount;
+          final mainAxisExtent = width * 1.25; // Increased from 1.05 to 1.25 to prevent overflow
+
+          return GridView.builder(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: crossAxisSpacing,
+              mainAxisSpacing: mainAxisSpacing,
+              mainAxisExtent: mainAxisExtent,
+            ),
+            itemCount: wallets.length,
+            itemBuilder: (context, index) {
+              return WalletCard(
+                wallet: wallets[index],
+                onTap: () => onWalletTap(wallets[index].id),
+              );
+            },
           );
         },
       ),
@@ -203,52 +213,51 @@ class _WalletCardState extends State<WalletCard>
                               ),
                           ],
                         ),
+                        const SizedBox(height: 8),
                         // Wallet name
-                        Flexible(
-                          child: Text(
-                            widget.wallet.name,
-                            style: AppTextStyles.subtitle1.copyWith(
-                              color: isDark
-                                  ? AppColors.darkTextPrimary
-                                  : AppColors.textPrimary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          widget.wallet.name,
+                          style: AppTextStyles.subtitle1.copyWith(
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.textPrimary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 4),
                         // Account number
-                        Flexible(
-                          child: Text(
-                            widget.wallet.maskedAccountNumber,
-                            style: AppTextStyles.caption.copyWith(
-                              color: isDark
-                                  ? AppColors.darkTextMuted
-                                  : AppColors.textMuted,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          widget.wallet.maskedAccountNumber,
+                          style: AppTextStyles.caption.copyWith(
+                            color: isDark
+                                ? AppColors.darkTextMuted
+                                : AppColors.textMuted,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                        const Spacer(),
                         // Balance
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                widget.wallet.balanceStatus,
-                                style: AppTextStyles.caption.copyWith(
-                                  color: isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.textSecondary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.wallet.balanceStatus,
+                              style: AppTextStyles.caption.copyWith(
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
                                 widget.wallet.formattedBalanceWithSign,
                                 style: AppTextStyles.subtitle1.copyWith(
                                   color: _getBalanceColor(),
@@ -257,8 +266,8 @@ class _WalletCardState extends State<WalletCard>
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
