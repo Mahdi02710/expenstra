@@ -22,7 +22,7 @@ class _TimelineScreenState extends State<TimelineScreen>
   final DataService _dataService = DataService();
   final FirestoreService _firestoreService = FirestoreService();
   final ScrollController _scrollController = ScrollController();
-  
+
   // Search and filter state
   String _searchQuery = '';
   TransactionType? _filterType;
@@ -75,19 +75,100 @@ class _TimelineScreenState extends State<TimelineScreen>
               ],
             ),
 
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: BalanceCard(
-                  totalBalance: _dataService.getTotalBalance(),
-                  thisMonthIncome: _dataService.getTotalIncome(
-                    period: const Duration(days: 30),
-                  ),
-                  thisMonthExpenses: _dataService.getTotalExpenses(
-                    period: const Duration(days: 30),
-                  ),
-                ),
-              ),
+            StreamBuilder<List<Wallet>>(
+              stream: _firestoreService.getWallets(),
+              builder: (context, walletsSnapshot) {
+                return StreamBuilder<List<Transaction>>(
+                  stream: _firestoreService.getTransactions(),
+                  builder: (context, transactionsSnapshot) {
+                    double totalBalance = 0.0;
+                    double thisMonthIncome = 0.0;
+                    double thisMonthExpenses = 0.0;
+
+                    if (walletsSnapshot.hasData && transactionsSnapshot.hasData) {
+                      final wallets = walletsSnapshot.data!;
+                      final transactions = transactionsSnapshot.data!;
+                      final now = DateTime.now();
+                      final thisMonthStart = DateTime(now.year, now.month);
+
+                      // Calculate balances per wallet (initial balance + transactions)
+                      final Map<String, double> walletBalances = {};
+                      for (final wallet in wallets) {
+                        walletBalances[wallet.id] = wallet.balance; // Start with initial balance
+                      }
+
+                      for (final tx in transactions) {
+                        // Update wallet balance
+                        walletBalances[tx.walletId] =
+                            (walletBalances[tx.walletId] ?? 0.0) +
+                                (tx.type == TransactionType.income
+                                    ? tx.amount
+                                    : -tx.amount);
+
+                        // Calculate this month's income and expenses
+                        if (tx.date.isAfter(thisMonthStart) ||
+                            tx.date.isAtSameMomentAs(thisMonthStart)) {
+                          if (tx.type == TransactionType.income) {
+                            thisMonthIncome += tx.amount;
+                          } else if (tx.type == TransactionType.expense) {
+                            thisMonthExpenses += tx.amount;
+                          }
+                        }
+                      }
+
+                      // Calculate net worth from all wallets
+                      // Net Worth = Assets (non-credit wallets) - Liabilities (credit card debt)
+                      for (final wallet in wallets) {
+                        final balance = walletBalances[wallet.id] ?? wallet.balance;
+                        if (wallet.type == WalletType.credit) {
+                          // Credit cards: only negative balances count as debt (liabilities)
+                          // Positive balances (available credit) don't count as assets
+                          if (balance < 0) {
+                            totalBalance += balance; // Subtract debt (balance is negative)
+                          }
+                          // If balance >= 0, it's available credit, not an asset, so ignore it
+                        } else {
+                          // Non-credit wallets are assets
+                          totalBalance += balance;
+                        }
+                      }
+                    } else if (transactionsSnapshot.hasData) {
+                      // Fallback: if wallets aren't loaded yet, just calculate from transactions
+                      final transactions = transactionsSnapshot.data!;
+                      final now = DateTime.now();
+                      final thisMonthStart = DateTime(now.year, now.month);
+
+                      for (final tx in transactions) {
+                        if (tx.type == TransactionType.income) {
+                          totalBalance += tx.amount;
+                        } else if (tx.type == TransactionType.expense) {
+                          totalBalance -= tx.amount;
+                        }
+
+                        if (tx.date.isAfter(thisMonthStart) ||
+                            tx.date.isAtSameMomentAs(thisMonthStart)) {
+                          if (tx.type == TransactionType.income) {
+                            thisMonthIncome += tx.amount;
+                          } else if (tx.type == TransactionType.expense) {
+                            thisMonthExpenses += tx.amount;
+                          }
+                        }
+                      }
+                    }
+
+                    return SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: BalanceCard(
+                          totalBalance: totalBalance,
+                          thisMonthIncome: thisMonthIncome,
+                          thisMonthExpenses: thisMonthExpenses,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
@@ -233,10 +314,17 @@ class _TimelineScreenState extends State<TimelineScreen>
                       .toList();
                 }
 
-                if (transactions.isEmpty && (_searchQuery.isNotEmpty || _filterType != null || _filterCategory != null || _filterWalletId != null)) {
+                if (transactions.isEmpty &&
+                    (_searchQuery.isNotEmpty ||
+                        _filterType != null ||
+                        _filterCategory != null ||
+                        _filterWalletId != null)) {
                   return const SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 40,
+                        horizontal: 20,
+                      ),
                       child: Column(
                         children: [
                           Icon(Icons.search_off, size: 48, color: Colors.grey),
@@ -275,7 +363,6 @@ class _TimelineScreenState extends State<TimelineScreen>
     );
   }
 
-
   Widget _buildTransactionItem(Transaction tx) {
     return Dismissible(
       key: Key(tx.id),
@@ -307,52 +394,62 @@ class _TimelineScreenState extends State<TimelineScreen>
       confirmDismiss: (direction) async {
         // Show confirmation dialog
         return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Delete Transaction'),
-            content: Text('Are you sure you want to delete "${tx.description}"?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Delete Transaction'),
+                content: Text(
+                  'Are you sure you want to delete "${tx.description}"?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                    ),
+                    child: const Text('Delete'),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(foregroundColor: AppColors.error),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ?? false;
+            ) ??
+            false;
       },
       onDismissed: (direction) {
-        _firestoreService.deleteTransaction(tx.id).then((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Deleted "${tx.description}"'),
-                backgroundColor: AppColors.success,
-                action: SnackBarAction(
-                  label: 'Undo',
-                  textColor: Colors.white,
-                  onPressed: () {
-                    // Note: Undo would require re-adding the transaction
-                    // This is a placeholder for future undo functionality
-                  },
-                ),
-              ),
-            );
-          }
-        }).catchError((error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error deleting transaction: ${error.toString()}'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-        });
+        _firestoreService
+            .deleteTransaction(tx.id)
+            .then((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deleted "${tx.description}"'),
+                    backgroundColor: AppColors.success,
+                    action: SnackBarAction(
+                      label: 'Undo',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        // Note: Undo would require re-adding the transaction
+                        // This is a placeholder for future undo functionality
+                      },
+                    ),
+                  ),
+                );
+              }
+            })
+            .catchError((error) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Error deleting transaction: ${error.toString()}',
+                    ),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            });
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -408,25 +505,30 @@ class _TimelineScreenState extends State<TimelineScreen>
       builder: (context) => TransactionForm(),
     ).then((result) {
       if (result != null && result is Transaction) {
-        _firestoreService.addTransaction(result).then((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${result.type == TransactionType.income ? "Income" : "Expense"} added successfully'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-          }
-        }).catchError((error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${error.toString()}'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-        });
+        _firestoreService
+            .addTransaction(result)
+            .then((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '${result.type == TransactionType.income ? "Income" : "Expense"} added successfully',
+                    ),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            })
+            .catchError((error) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${error.toString()}'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            });
       }
     });
   }
@@ -436,28 +538,32 @@ class _TimelineScreenState extends State<TimelineScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const TransactionForm(initialType: TransactionType.income),
+      builder: (context) =>
+          const TransactionForm(initialType: TransactionType.income),
     ).then((result) {
       if (result != null && result is Transaction) {
-        _firestoreService.addTransaction(result).then((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Income added successfully'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-          }
-        }).catchError((error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${error.toString()}'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-        });
+        _firestoreService
+            .addTransaction(result)
+            .then((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Income added successfully'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            })
+            .catchError((error) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${error.toString()}'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            });
       }
     });
   }
@@ -467,28 +573,32 @@ class _TimelineScreenState extends State<TimelineScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const TransactionForm(initialType: TransactionType.expense),
+      builder: (context) =>
+          const TransactionForm(initialType: TransactionType.expense),
     ).then((result) {
       if (result != null && result is Transaction) {
-        _firestoreService.addTransaction(result).then((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Expense added successfully'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-          }
-        }).catchError((error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${error.toString()}'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-        });
+        _firestoreService
+            .addTransaction(result)
+            .then((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Expense added successfully'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            })
+            .catchError((error) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${error.toString()}'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            });
       }
     });
   }
@@ -512,7 +622,8 @@ class _TimelineScreenState extends State<TimelineScreen>
           id: '',
           type: TransactionType.expense,
           amount: amount,
-          description: 'Transfer to ${_dataService.getWallet(toWalletId)?.name ?? "Wallet"}',
+          description:
+              'Transfer to ${_dataService.getWallet(toWalletId)?.name ?? "Wallet"}',
           category: 'Transfer',
           icon: '↗️',
           date: now,
@@ -524,7 +635,8 @@ class _TimelineScreenState extends State<TimelineScreen>
           id: '',
           type: TransactionType.income,
           amount: amount,
-          description: 'Transfer from ${_dataService.getWallet(fromWalletId)?.name ?? "Wallet"}',
+          description:
+              'Transfer from ${_dataService.getWallet(fromWalletId)?.name ?? "Wallet"}',
           category: 'Transfer',
           icon: '↙️',
           date: now,
@@ -534,27 +646,29 @@ class _TimelineScreenState extends State<TimelineScreen>
 
         // Add both transactions
         Future.wait([
-          _firestoreService.addTransaction(expenseTx),
-          _firestoreService.addTransaction(incomeTx),
-        ]).then((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Transfer completed successfully'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-          }
-        }).catchError((error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${error.toString()}'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-        });
+              _firestoreService.addTransaction(expenseTx),
+              _firestoreService.addTransaction(incomeTx),
+            ])
+            .then((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Transfer completed successfully'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            })
+            .catchError((error) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${error.toString()}'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            });
       }
     });
   }
@@ -669,12 +783,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Type filter
-                  Text(
-                    'Type',
-                    style: AppTextStyles.subtitle2,
-                  ),
+                  Text('Type', style: AppTextStyles.subtitle2),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -696,7 +807,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                           selected: _filterType == TransactionType.income,
                           onSelected: (selected) {
                             setState(() {
-                              _filterType = selected ? TransactionType.income : null;
+                              _filterType = selected
+                                  ? TransactionType.income
+                                  : null;
                             });
                           },
                         ),
@@ -708,21 +821,20 @@ class _TimelineScreenState extends State<TimelineScreen>
                           selected: _filterType == TransactionType.expense,
                           onSelected: (selected) {
                             setState(() {
-                              _filterType = selected ? TransactionType.expense : null;
+                              _filterType = selected
+                                  ? TransactionType.expense
+                                  : null;
                             });
                           },
                         ),
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Category filter
-                  Text(
-                    'Category',
-                    style: AppTextStyles.subtitle2,
-                  ),
+                  Text('Category', style: AppTextStyles.subtitle2),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -737,26 +849,33 @@ class _TimelineScreenState extends State<TimelineScreen>
                           }
                         },
                       ),
-                      ...['Food & Drink', 'Transportation', 'Shopping', 'Housing', 'Entertainment', 'Health & Fitness', 'Income', 'Other']
-                          .map((category) => FilterChip(
-                                label: Text(category),
-                                selected: _filterCategory == category,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _filterCategory = selected ? category : null;
-                                  });
-                                },
-                              )),
+                      ...[
+                        'Food & Drink',
+                        'Transportation',
+                        'Shopping',
+                        'Housing',
+                        'Entertainment',
+                        'Health & Fitness',
+                        'Income',
+                        'Other',
+                      ].map(
+                        (category) => FilterChip(
+                          label: Text(category),
+                          selected: _filterCategory == category,
+                          onSelected: (selected) {
+                            setState(() {
+                              _filterCategory = selected ? category : null;
+                            });
+                          },
+                        ),
+                      ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Wallet filter
-                  Text(
-                    'Wallet',
-                    style: AppTextStyles.subtitle2,
-                  ),
+                  Text('Wallet', style: AppTextStyles.subtitle2),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -771,22 +890,26 @@ class _TimelineScreenState extends State<TimelineScreen>
                           }
                         },
                       ),
-                      ..._dataService.wallets.map((wallet) => FilterChip(
-                            label: Text('${wallet.icon} ${wallet.name}'),
-                            selected: _filterWalletId == wallet.id,
-                            onSelected: (selected) {
-                              setState(() {
-                                _filterWalletId = selected ? wallet.id : null;
-                              });
-                            },
-                          )),
+                      ..._dataService.wallets.map(
+                        (wallet) => FilterChip(
+                          label: Text('${wallet.icon} ${wallet.name}'),
+                          selected: _filterWalletId == wallet.id,
+                          onSelected: (selected) {
+                            setState(() {
+                              _filterWalletId = selected ? wallet.id : null;
+                            });
+                          },
+                        ),
+                      ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Clear filters button
-                  if (_filterType != null || _filterCategory != null || _filterWalletId != null)
+                  if (_filterType != null ||
+                      _filterCategory != null ||
+                      _filterWalletId != null)
                     OutlinedButton(
                       onPressed: () {
                         setState(() {
@@ -798,7 +921,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                       },
                       child: const Text('Clear All Filters'),
                     ),
-                  
+
                   const SizedBox(height: 16),
                 ],
               ),
@@ -811,7 +934,7 @@ class _TimelineScreenState extends State<TimelineScreen>
 
   void _onTransactionTap(Transaction transaction) {
     final wallet = _dataService.getWallet(transaction.walletId);
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -848,10 +971,11 @@ class _TimelineScreenState extends State<TimelineScreen>
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: (transaction.isIncome
-                                    ? AppColors.income
-                                    : AppColors.expense)
-                                .withValues(alpha: 0.1),
+                            color:
+                                (transaction.isIncome
+                                        ? AppColors.income
+                                        : AppColors.expense)
+                                    .withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Text(
@@ -872,7 +996,8 @@ class _TimelineScreenState extends State<TimelineScreen>
                         Text(
                           transaction.description,
                           style: AppTextStyles.h4.copyWith(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? AppColors.darkTextPrimary
                                 : AppColors.textPrimary,
                           ),
@@ -880,9 +1005,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Details
                   _buildDetailRow('Category', transaction.category),
                   _buildDetailRow('Date', transaction.formattedDate),
@@ -891,9 +1016,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                     _buildDetailRow('Wallet', '${wallet.icon} ${wallet.name}'),
                   if (transaction.note != null && transaction.note!.isNotEmpty)
                     _buildDetailRow('Note', transaction.note!),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Delete button
                   ElevatedButton(
                     onPressed: () {
@@ -909,7 +1034,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                     ),
                     child: const Text('Delete Transaction'),
                   ),
-                  
+
                   const SizedBox(height: 16),
                 ],
               ),
@@ -928,9 +1053,7 @@ class _TimelineScreenState extends State<TimelineScreen>
         children: [
           Text(
             label,
-            style: AppTextStyles.body2.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTextStyles.body2.copyWith(color: AppColors.textSecondary),
           ),
           Text(
             value,
@@ -950,7 +1073,9 @@ class _TimelineScreenState extends State<TimelineScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: Text('Are you sure you want to delete "${transaction.description}"?'),
+        content: Text(
+          'Are you sure you want to delete "${transaction.description}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -958,27 +1083,30 @@ class _TimelineScreenState extends State<TimelineScreen>
           ),
           TextButton(
             onPressed: () {
-              _firestoreService.deleteTransaction(transaction.id).then((_) {
-                if (mounted) {
-                  Navigator.pop(context); // Close dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Transaction deleted'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
-              }).catchError((error) {
-                if (mounted) {
-                  Navigator.pop(context); // Close dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${error.toString()}'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              });
+              _firestoreService
+                  .deleteTransaction(transaction.id)
+                  .then((_) {
+                    if (mounted) {
+                      Navigator.pop(context); // Close dialog
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Transaction deleted'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  })
+                  .catchError((error) {
+                    if (mounted) {
+                      Navigator.pop(context); // Close dialog
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: ${error.toString()}'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                    }
+                  });
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),
@@ -988,12 +1116,17 @@ class _TimelineScreenState extends State<TimelineScreen>
     );
   }
 
-  void _deleteTransactionFromDetails(Transaction transaction, BuildContext bottomSheetContext) {
+  void _deleteTransactionFromDetails(
+    Transaction transaction,
+    BuildContext bottomSheetContext,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: Text('Are you sure you want to delete "${transaction.description}"?'),
+        content: Text(
+          'Are you sure you want to delete "${transaction.description}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1001,28 +1134,31 @@ class _TimelineScreenState extends State<TimelineScreen>
           ),
           TextButton(
             onPressed: () {
-              _firestoreService.deleteTransaction(transaction.id).then((_) {
-                if (mounted) {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(bottomSheetContext); // Close bottom sheet
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Transaction deleted'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
-              }).catchError((error) {
-                if (mounted) {
-                  Navigator.pop(context); // Close dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${error.toString()}'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              });
+              _firestoreService
+                  .deleteTransaction(transaction.id)
+                  .then((_) {
+                    if (mounted) {
+                      Navigator.pop(context); // Close dialog
+                      Navigator.pop(bottomSheetContext); // Close bottom sheet
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Transaction deleted'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  })
+                  .catchError((error) {
+                    if (mounted) {
+                      Navigator.pop(context); // Close dialog
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: ${error.toString()}'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                    }
+                  });
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),

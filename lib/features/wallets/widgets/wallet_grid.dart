@@ -27,7 +27,7 @@ class WalletGrid extends StatelessWidget {
           final crossAxisSpacing = 16.0;
           final mainAxisSpacing = 16.0;
           final width = (constraints.maxWidth - crossAxisSpacing) / crossAxisCount;
-          final mainAxisExtent = width * 1.25; // Increased from 1.05 to 1.25 to prevent overflow
+          final mainAxisExtent = width * 0.85; // Compact design to prevent overflow
 
           return GridView.builder(
             padding: EdgeInsets.zero,
@@ -167,7 +167,7 @@ class _WalletCardState extends State<WalletCard>
                   ),
                   // Content
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,25 +177,25 @@ class _WalletCardState extends State<WalletCard>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              width: 45,
-                              height: 45,
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
                                 color: _getWalletAccentColor().withValues(
                                   alpha: 0.15,
                                 ),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Center(
                                 child: Text(
                                   widget.wallet.icon,
-                                  style: const TextStyle(fontSize: 20),
+                                  style: const TextStyle(fontSize: 16),
                                 ),
                               ),
                             ),
                             if (!widget.wallet.isActive)
                               Container(
-                                width: 8,
-                                height: 8,
+                                width: 6,
+                                height: 6,
                                 decoration: const BoxDecoration(
                                   color: AppColors.textMuted,
                                   shape: BoxShape.circle,
@@ -204,8 +204,8 @@ class _WalletCardState extends State<WalletCard>
                             else if (widget.wallet.isCredit &&
                                 widget.wallet.balance < 0)
                               Container(
-                                width: 8,
-                                height: 8,
+                                width: 6,
+                                height: 6,
                                 decoration: const BoxDecoration(
                                   color: AppColors.warning,
                                   shape: BoxShape.circle,
@@ -213,19 +213,21 @@ class _WalletCardState extends State<WalletCard>
                               ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         // Wallet name
                         Text(
                           widget.wallet.name,
-                          style: AppTextStyles.subtitle1.copyWith(
+                          style: AppTextStyles.subtitle2.copyWith(
                             color: isDark
                                 ? AppColors.darkTextPrimary
                                 : AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 1),
                         // Account number
                         Text(
                           widget.wallet.maskedAccountNumber,
@@ -233,6 +235,7 @@ class _WalletCardState extends State<WalletCard>
                             color: isDark
                                 ? AppColors.darkTextMuted
                                 : AppColors.textMuted,
+                            fontSize: 9,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -249,19 +252,21 @@ class _WalletCardState extends State<WalletCard>
                                 color: isDark
                                     ? AppColors.darkTextSecondary
                                     : AppColors.textSecondary,
+                                fontSize: 8,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 1),
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
                                 widget.wallet.formattedBalanceWithSign,
-                                style: AppTextStyles.subtitle1.copyWith(
+                                style: AppTextStyles.subtitle2.copyWith(
                                   color: _getBalanceColor(),
                                   fontWeight: FontWeight.w700,
+                                  fontSize: 14,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

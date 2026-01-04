@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 enum BudgetPeriod { weekly, monthly, yearly }
@@ -204,6 +205,55 @@ class Budget {
       'alertThreshold': alertThreshold,
       'includedCategories': includedCategories,
     };
+  }
+
+  // Convert Object -> Map (For writing to Firebase)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'spent': spent,
+      'limit': limit,
+      'icon': icon,
+      'color': color,
+      'period': period.name,
+      'category': category,
+      'startDate': Timestamp.fromDate(startDate),
+      'endDate': Timestamp.fromDate(endDate),
+      'isActive': isActive,
+      'alertThreshold': alertThreshold,
+      'includedCategories': includedCategories,
+    };
+  }
+
+  // Convert Map -> Object (For reading from Firebase)
+  factory Budget.fromMap(Map<String, dynamic> map, String docId) {
+    return Budget(
+      id: docId,
+      name: map['name'] ?? '',
+      spent: (map['spent'] as num?)?.toDouble() ?? 0.0,
+      limit: (map['limit'] as num?)?.toDouble() ?? 0.0,
+      icon: map['icon'] ?? '💰',
+      color: map['color'] ?? 'blue',
+      period: BudgetPeriod.values.firstWhere(
+        (e) => e.name == map['period'],
+        orElse: () => BudgetPeriod.monthly,
+      ),
+      category: map['category'] ?? 'Other',
+      startDate: map['startDate'] is Timestamp
+          ? (map['startDate'] as Timestamp).toDate()
+          : DateTime.parse(map['startDate'].toString()),
+      endDate: map['endDate'] is Timestamp
+          ? (map['endDate'] as Timestamp).toDate()
+          : DateTime.parse(map['endDate'].toString()),
+      isActive: map['isActive'] ?? true,
+      alertThreshold: map['alertThreshold'] != null
+          ? (map['alertThreshold'] as num).toDouble()
+          : null,
+      includedCategories: map['includedCategories'] != null
+          ? List<String>.from(map['includedCategories'])
+          : null,
+    );
   }
 
   // Copy with method

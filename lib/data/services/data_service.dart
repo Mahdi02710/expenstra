@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
@@ -6,7 +7,11 @@ class DataService {
   static final DataService _instance = DataService._internal();
   factory DataService() => _instance;
   DataService._internal() {
-    _initializeSampleData();
+    // Only initialize sample data if no user is logged in
+    // When a user is logged in, data should come from Firestore
+    if (FirebaseAuth.instance.currentUser == null) {
+      _initializeSampleData();
+    }
   }
 
   final List<Transaction> _transactions = [];

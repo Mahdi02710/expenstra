@@ -5,16 +5,13 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/transaction.dart';
 import '../../../data/models/wallet.dart';
 import '../../../data/services/data_service.dart';
+import '../../../data/services/firestore_service.dart';
 
 class TransactionForm extends StatefulWidget {
   final TransactionType? initialType;
   final Transaction? transaction;
 
-  const TransactionForm({
-    super.key,
-    this.initialType,
-    this.transaction,
-  });
+  const TransactionForm({super.key, this.initialType, this.transaction});
 
   @override
   State<TransactionForm> createState() => _TransactionFormState();
@@ -32,6 +29,7 @@ class _TransactionFormState extends State<TransactionForm> {
   String _selectedWalletId = '';
   DateTime _selectedDate = DateTime.now();
   final DataService _dataService = DataService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   // Common categories with icons
   final List<Map<String, String>> _categories = [
@@ -43,7 +41,7 @@ class _TransactionFormState extends State<TransactionForm> {
     {'name': 'Health & Fitness', 'icon': '💊'},
     {'name': 'Education', 'icon': '📚'},
     {'name': 'Bills & Utilities', 'icon': '💡'},
-    {'name': 'Income', 'icon': '💼'},
+    {'name': 'Income', 'icon': '💵'},
     {'name': 'Other', 'icon': '💰'},
   ];
 
@@ -51,7 +49,7 @@ class _TransactionFormState extends State<TransactionForm> {
   void initState() {
     super.initState();
     _type = widget.initialType ?? TransactionType.expense;
-    
+
     // Initialize with existing transaction if editing
     if (widget.transaction != null) {
       final tx = widget.transaction!;
@@ -64,10 +62,12 @@ class _TransactionFormState extends State<TransactionForm> {
       _selectedWalletId = tx.walletId;
       _selectedDate = tx.date;
     } else {
-      // Set default wallet (first available)
-      final wallets = _dataService.wallets;
-      if (wallets.isNotEmpty) {
-        _selectedWalletId = wallets.first.id;
+      // Set default wallet will be handled by StreamBuilder
+      _selectedWalletId = '';
+      // Set default category based on type
+      if (_type == TransactionType.income) {
+        _selectedCategory = 'Income';
+        _selectedIcon = '💵';
       }
     }
   }
@@ -158,7 +158,9 @@ class _TransactionFormState extends State<TransactionForm> {
                     // Amount
                     TextFormField(
                       controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Amount',
                         prefixText: '\$ ',
@@ -166,7 +168,8 @@ class _TransactionFormState extends State<TransactionForm> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         filled: true,
-                        fillColor: Theme.of(context).brightness == Brightness.dark
+                        fillColor:
+                            Theme.of(context).brightness == Brightness.dark
                             ? AppColors.darkInputBackground
                             : AppColors.inputBackground,
                       ),
@@ -193,7 +196,8 @@ class _TransactionFormState extends State<TransactionForm> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         filled: true,
-                        fillColor: Theme.of(context).brightness == Brightness.dark
+                        fillColor:
+                            Theme.of(context).brightness == Brightness.dark
                             ? AppColors.darkInputBackground
                             : AppColors.inputBackground,
                       ),
@@ -207,44 +211,67 @@ class _TransactionFormState extends State<TransactionForm> {
 
                     const SizedBox(height: 16),
 
-                    // Category
-                    InkWell(
-                      onTap: _showCategoryPicker,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? AppColors.darkInputBackground
-                              : AppColors.inputBackground,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(context).dividerColor,
+                    // Category (only show for expenses)
+                    if (_type == TransactionType.expense) ...[
+                      InkWell(
+                        onTap: _showCategoryPicker,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? AppColors.darkInputBackground
+                                : AppColors.inputBackground,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(_selectedIcon, style: const TextStyle(fontSize: 24)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _selectedCategory,
-                                style: AppTextStyles.body1.copyWith(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? AppColors.darkTextPrimary
-                                      : AppColors.textPrimary,
+                          child: Row(
+                            children: [
+                              Text(
+                                _selectedIcon,
+                                style: const TextStyle(fontSize: 24),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _selectedCategory,
+                                  style: AppTextStyles.body1.copyWith(
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? AppColors.darkTextPrimary
+                                        : AppColors.textPrimary,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const Icon(Icons.arrow_drop_down),
-                          ],
+                              const Icon(Icons.arrow_drop_down),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Wallet
-                    _buildWalletSelector(),
+                    StreamBuilder<List<Wallet>>(
+                      stream: _firestoreService.getWallets(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                          if (_selectedWalletId.isEmpty) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                setState(() {
+                                  _selectedWalletId = snapshot.data!.first.id;
+                                });
+                              }
+                            });
+                          }
+                          return _buildWalletSelector(snapshot.data!);
+                        }
+                        return _buildWalletSelector([]);
+                      },
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -269,7 +296,9 @@ class _TransactionFormState extends State<TransactionForm> {
                             Text(
                               DateFormat('MMM dd, yyyy').format(_selectedDate),
                               style: AppTextStyles.body1.copyWith(
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? AppColors.darkTextPrimary
                                     : AppColors.textPrimary,
                               ),
@@ -290,7 +319,8 @@ class _TransactionFormState extends State<TransactionForm> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         filled: true,
-                        fillColor: Theme.of(context).brightness == Brightness.dark
+                        fillColor:
+                            Theme.of(context).brightness == Brightness.dark
                             ? AppColors.darkInputBackground
                             : AppColors.inputBackground,
                       ),
@@ -313,7 +343,9 @@ class _TransactionFormState extends State<TransactionForm> {
                         ),
                       ),
                       child: Text(
-                        widget.transaction == null ? 'Add Transaction' : 'Update Transaction',
+                        widget.transaction == null
+                            ? 'Add Transaction'
+                            : 'Update Transaction',
                         style: AppTextStyles.buttonLarge,
                       ),
                     ),
@@ -336,13 +368,24 @@ class _TransactionFormState extends State<TransactionForm> {
         : AppColors.expense;
 
     return InkWell(
-      onTap: () => setState(() => _type = type),
+      onTap: () {
+        setState(() {
+          _type = type;
+          // Set default category when switching types
+          if (type == TransactionType.income) {
+            _selectedCategory = 'Income';
+            _selectedIcon = '💵';
+          } else if (type == TransactionType.expense && _selectedCategory == 'Income') {
+            // Reset to default expense category if switching from income
+            _selectedCategory = 'Food & Drink';
+            _selectedIcon = '🍔';
+          }
+        });
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? color.withValues(alpha: 0.2)
-              : Colors.transparent,
+          color: isSelected ? color.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? color : Theme.of(context).dividerColor,
@@ -362,9 +405,8 @@ class _TransactionFormState extends State<TransactionForm> {
     );
   }
 
-  Widget _buildWalletSelector() {
-    final wallets = _dataService.wallets;
-    
+  Widget _buildWalletSelector(List<Wallet> wallets) {
+
     if (wallets.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -389,35 +431,47 @@ class _TransactionFormState extends State<TransactionForm> {
               ? AppColors.darkInputBackground
               : AppColors.inputBackground,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).dividerColor,
-          ),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           children: [
-            Text(
-              _getSelectedWallet()?.icon ?? '💰',
-              style: const TextStyle(fontSize: 24),
+            StreamBuilder<List<Wallet>>(
+              stream: _firestoreService.getWallets(),
+              builder: (context, snapshot) {
+                final wallets = snapshot.data ?? [];
+                final selectedWallet = _getSelectedWallet(wallets);
+                return Text(
+                  selectedWallet?.icon ?? '💰',
+                  style: const TextStyle(fontSize: 24),
+                );
+              },
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getSelectedWallet()?.name ?? 'Select Wallet',
-                    style: AppTextStyles.body1.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                  if (_getSelectedWallet() != null)
-                    Text(
-                      _getSelectedWallet()!.formattedBalance,
-                      style: AppTextStyles.caption,
-                    ),
-                ],
+              child: StreamBuilder<List<Wallet>>(
+                stream: _firestoreService.getWallets(),
+                builder: (context, snapshot) {
+                  final wallets = snapshot.data ?? [];
+                  final selectedWallet = _getSelectedWallet(wallets);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        selectedWallet?.name ?? 'Select Wallet',
+                        style: AppTextStyles.body1.copyWith(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                      if (selectedWallet != null)
+                        Text(
+                          selectedWallet.formattedBalance,
+                          style: AppTextStyles.caption,
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
             const Icon(Icons.arrow_drop_down),
@@ -427,9 +481,9 @@ class _TransactionFormState extends State<TransactionForm> {
     );
   }
 
-  Wallet? _getSelectedWallet() {
+  Wallet? _getSelectedWallet(List<Wallet> wallets) {
     try {
-      return _dataService.wallets.firstWhere((w) => w.id == _selectedWalletId);
+      return wallets.firstWhere((w) => w.id == _selectedWalletId);
     } catch (e) {
       return null;
     }
@@ -439,7 +493,11 @@ class _TransactionFormState extends State<TransactionForm> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -447,8 +505,18 @@ class _TransactionFormState extends State<TransactionForm> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
                 'Select Category',
                 style: AppTextStyles.h4.copyWith(
@@ -458,65 +526,76 @@ class _TransactionFormState extends State<TransactionForm> {
                 ),
               ),
             ),
-            GridView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 1.2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                final isSelected = _selectedCategory == category['name'];
+            Flexible(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 1.2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: _categories.length,
+                    itemBuilder: (context, index) {
+                      final category = _categories[index];
+                      final isSelected = _selectedCategory == category['name'];
 
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = category['name']!;
-                      _selectedIcon = category['icon']!;
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.1)
-                          : Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : Theme.of(context).dividerColor,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          category['icon']!,
-                          style: const TextStyle(fontSize: 32),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          category['name']!,
-                          style: AppTextStyles.caption.copyWith(
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = category['name']!;
+                            _selectedIcon = category['icon']!;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: 0.1)
+                                : Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : Theme.of(context).dividerColor,
+                              width: isSelected ? 2 : 1,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                category['icon']!,
+                                style: const TextStyle(fontSize: 32),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                category['name']!,
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(
+              height: MediaQuery.of(context).viewInsets.bottom,
+            ),
           ],
         ),
       ),
@@ -524,54 +603,72 @@ class _TransactionFormState extends State<TransactionForm> {
   }
 
   void _showWalletPicker() {
-    final wallets = _dataService.wallets;
-    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Select Wallet',
-                style: AppTextStyles.h4.copyWith(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.darkTextPrimary
-                      : AppColors.textPrimary,
+      builder: (context) => StreamBuilder<List<Wallet>>(
+        stream: _firestoreService.getWallets(),
+        builder: (context, snapshot) {
+          final wallets = snapshot.data ?? [];
+          
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Select Wallet',
+                    style: AppTextStyles.h4.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              itemCount: wallets.length,
-              itemBuilder: (context, index) {
-                final wallet = wallets[index];
-                final isSelected = wallet.id == _selectedWalletId;
+                if (wallets.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text(
+                      'No wallets available. Please add a wallet first.',
+                      style: AppTextStyles.body2,
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: wallets.length,
+                    itemBuilder: (context, index) {
+                      final wallet = wallets[index];
+                      final isSelected = wallet.id == _selectedWalletId;
 
-                return ListTile(
-                  leading: Text(wallet.icon, style: const TextStyle(fontSize: 32)),
-                  title: Text(wallet.name),
-                  subtitle: Text(wallet.formattedBalance),
-                  trailing: isSelected
-                      ? Icon(Icons.check, color: AppColors.primary)
-                      : null,
-                  onTap: () {
-                    setState(() => _selectedWalletId = wallet.id);
-                    Navigator.pop(context);
-                  },
-                );
-              },
+                      return ListTile(
+                        leading: Text(
+                          wallet.icon,
+                          style: const TextStyle(fontSize: 32),
+                        ),
+                        title: Text(wallet.name),
+                        subtitle: Text(wallet.formattedBalance),
+                        trailing: isSelected
+                            ? Icon(Icons.check, color: AppColors.primary)
+                            : null,
+                        onTap: () {
+                          setState(() => _selectedWalletId = wallet.id);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                const SizedBox(height: 16),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -591,20 +688,28 @@ class _TransactionFormState extends State<TransactionForm> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedWalletId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a wallet')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a wallet')));
       return;
     }
 
     final amount = double.parse(_amountController.text);
+    // Use default category for income if not set
+    final category = _type == TransactionType.income
+        ? (_selectedCategory.isEmpty ? 'Income' : _selectedCategory)
+        : _selectedCategory;
+    final icon = _type == TransactionType.income
+        ? (_selectedIcon.isEmpty ? '💵' : _selectedIcon)
+        : _selectedIcon;
+    
     final transaction = Transaction(
       id: widget.transaction?.id ?? '',
       type: _type,
       amount: amount,
       description: _descriptionController.text.trim(),
-      category: _selectedCategory,
-      icon: _selectedIcon,
+      category: category,
+      icon: icon,
       date: _selectedDate,
       walletId: _selectedWalletId,
       note: _noteController.text.trim().isEmpty
@@ -615,4 +720,3 @@ class _TransactionFormState extends State<TransactionForm> {
     Navigator.of(context).pop(transaction);
   }
 }
-

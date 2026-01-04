@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 enum WalletType { bank, savings, credit, cash, investment }
@@ -144,6 +145,55 @@ class Wallet {
       'createdAt': createdAt.toIso8601String(),
       'lastTransactionDate': lastTransactionDate?.toIso8601String(),
     };
+  }
+
+  // Convert Object -> Map (For writing to Firebase)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'balance': balance,
+      'type': type.name,
+      'icon': icon,
+      'color': color,
+      'accountNumber': accountNumber,
+      'bankName': bankName,
+      'creditLimit': creditLimit,
+      'isActive': isActive,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'lastTransactionDate': lastTransactionDate != null
+          ? Timestamp.fromDate(lastTransactionDate!)
+          : null,
+    };
+  }
+
+  // Convert Map -> Object (For reading from Firebase)
+  factory Wallet.fromMap(Map<String, dynamic> map, String docId) {
+    return Wallet(
+      id: docId,
+      name: map['name'] ?? '',
+      balance: (map['balance'] as num?)?.toDouble() ?? 0.0,
+      type: WalletType.values.firstWhere(
+        (e) => e.name == map['type'],
+        orElse: () => WalletType.bank,
+      ),
+      icon: map['icon'] ?? '💰',
+      color: map['color'] ?? 'blue',
+      accountNumber: map['accountNumber'] ?? '',
+      bankName: map['bankName'],
+      creditLimit: map['creditLimit'] != null
+          ? (map['creditLimit'] as num).toDouble()
+          : null,
+      isActive: map['isActive'] ?? true,
+      createdAt: map['createdAt'] is Timestamp
+          ? (map['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(map['createdAt'].toString()),
+      lastTransactionDate: map['lastTransactionDate'] != null
+          ? (map['lastTransactionDate'] is Timestamp
+              ? (map['lastTransactionDate'] as Timestamp).toDate()
+              : DateTime.parse(map['lastTransactionDate'].toString()))
+          : null,
+    );
   }
 
   // Copy with method

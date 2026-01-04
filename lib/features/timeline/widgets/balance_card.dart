@@ -45,7 +45,7 @@ class BalanceCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Total Balance',
+                'Net Worth',
                 style: AppTextStyles.body1.copyWith(
                   color: Colors.white.withValues(alpha: 0.9),
                 ),
