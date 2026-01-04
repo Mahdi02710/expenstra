@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'expenstra.firebasestorage.app',
     measurementId: 'G-0VN353TDZ3',
   );
+
 }

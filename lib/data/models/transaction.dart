@@ -106,7 +106,23 @@ class Transaction {
       'description': description,
       'category': category,
       'icon': icon,
-      'date': Timestamp.fromDate(date), // Writes as Timestamp
+      'date': Timestamp.fromDate(date), // Writes as Timestamp for Firestore
+      'walletId': walletId,
+      'note': note,
+      'tags': tags,
+    };
+  }
+
+  // Convert Object -> Map (For local storage - without Timestamp)
+  Map<String, dynamic> toMapForLocal() {
+    return {
+      'id': id,
+      'type': type.name,
+      'amount': amount,
+      'description': description,
+      'category': category,
+      'icon': icon,
+      'date': date.millisecondsSinceEpoch, // Use milliseconds for SQLite
       'walletId': walletId,
       'note': note,
       'tags': tags,
