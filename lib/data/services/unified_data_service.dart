@@ -30,15 +30,22 @@ class UnifiedDataService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // Initial sync if user is authenticated
-    if (FirebaseAuth.instance.currentUser != null) {
-      await _syncService.syncAll();
+    try {
+      // Initial sync if user is authenticated
+      if (FirebaseAuth.instance.currentUser != null) {
+        await _syncService.syncAll();
+      }
+
+      // Start periodic syncing
+      _startPeriodicSync();
+
+      _isInitialized = true;
+    } catch (e) {
+      print('Error initializing UnifiedDataService: $e');
+      // Don't throw - allow app to continue with local data only
+      // Still mark as initialized so app can proceed
+      _isInitialized = true;
     }
-
-    // Start periodic syncing
-    _startPeriodicSync();
-
-    _isInitialized = true;
   }
 
   void _startPeriodicSync() {

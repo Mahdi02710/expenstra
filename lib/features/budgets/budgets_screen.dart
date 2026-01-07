@@ -419,6 +419,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
               }
 
               final budgetWithSpent = budget.copyWith(spent: spent);
+              final isDark = Theme.of(context).brightness == Brightness.dark;
 
               return Container(
                 height: MediaQuery.of(context).size.height * 0.8,
@@ -448,7 +449,11 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                             width: 60,
                             height: 60,
                             decoration: BoxDecoration(
-                              color: AppColors.primaryWithOpacity(0.1),
+                              color: budgetWithSpent.isOverBudget
+                                  ? AppColors.error.withValues(alpha: 0.1)
+                                  : budgetWithSpent.isNearLimit
+                                      ? AppColors.warning.withValues(alpha: 0.1)
+                                      : AppColors.primaryWithOpacity(0.1),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Center(
@@ -478,24 +483,41 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                               const SizedBox(height: 8),
 
                               LinearProgressIndicator(
-                                value: budgetWithSpent.percentage,
-                                backgroundColor: AppColors.border,
+                                value: budgetWithSpent.percentage.clamp(0.0, 1.0),
+                                backgroundColor: isDark
+                                    ? AppColors.darkBorder
+                                    : AppColors.border,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   budgetWithSpent.isOverBudget
                                       ? AppColors.error
-                                      : AppColors.primary,
+                                      : budgetWithSpent.isNearLimit
+                                          ? AppColors.warning
+                                          : AppColors.primary,
                                 ),
                               ),
 
                               const SizedBox(height: 8),
 
-                              Text(
-                                budgetWithSpent.status,
-                                style: AppTextStyles.body2.copyWith(
-                                  color: budgetWithSpent.isOverBudget
-                                      ? AppColors.error
-                                      : AppColors.income,
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    budgetWithSpent.statusEmoji,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    budgetWithSpent.status,
+                                    style: AppTextStyles.body2.copyWith(
+                                      color: budgetWithSpent.isOverBudget
+                                          ? AppColors.error
+                                          : budgetWithSpent.isNearLimit
+                                              ? AppColors.warning
+                                              : AppColors.income,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -513,21 +535,84 @@ class _BudgetsScreenState extends State<BudgetsScreen>
                             _buildBudgetDetailRow('Category', budgetWithSpent.category),
                             _buildBudgetDetailRow('Period', budgetWithSpent.periodShortLabel),
                             _buildBudgetDetailRow(
+                              'Spent',
+                              budgetWithSpent.formattedSpent,
+                            ),
+                            _buildBudgetDetailRow(
+                              'Limit',
+                              budgetWithSpent.formattedLimit,
+                            ),
+                            _buildBudgetDetailRow(
                               'Remaining',
                               budgetWithSpent.formattedRemaining,
                             ),
                             _buildBudgetDetailRow(
                               'Progress',
-                              budgetWithSpent.formattedPercentage,
+                              '${budgetWithSpent.formattedPercentage} (${budgetWithSpent.status})',
                             ),
                             _buildBudgetDetailRow(
                               'Days Left',
                               budgetWithSpent.daysRemainingText,
                             ),
+                            if (budgetWithSpent.includedCategories != null &&
+                                budgetWithSpent.includedCategories!.length > 1)
+                              _buildBudgetDetailRow(
+                                'Categories',
+                                budgetWithSpent.includedCategories!.join(', '),
+                              ),
                             const SizedBox(height: 16),
-                            Text('Spending Advice', style: AppTextStyles.subtitle1),
-                            const SizedBox(height: 8),
-                            Text(budgetWithSpent.spendingAdvice, style: AppTextStyles.body2),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: budgetWithSpent.isOverBudget
+                                    ? AppColors.error.withValues(alpha: 0.1)
+                                    : budgetWithSpent.isNearLimit
+                                        ? AppColors.warning.withValues(alpha: 0.1)
+                                        : AppColors.income.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: budgetWithSpent.isOverBudget
+                                      ? AppColors.error.withValues(alpha: 0.3)
+                                      : budgetWithSpent.isNearLimit
+                                          ? AppColors.warning.withValues(alpha: 0.3)
+                                          : AppColors.income.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.lightbulb_outline,
+                                        size: 20,
+                                        color: budgetWithSpent.isOverBudget
+                                            ? AppColors.error
+                                            : budgetWithSpent.isNearLimit
+                                                ? AppColors.warning
+                                                : AppColors.income,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Spending Advice',
+                                        style: AppTextStyles.subtitle1.copyWith(
+                                          color: budgetWithSpent.isOverBudget
+                                              ? AppColors.error
+                                              : budgetWithSpent.isNearLimit
+                                                  ? AppColors.warning
+                                                  : AppColors.income,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    budgetWithSpent.spendingAdvice,
+                                    style: AppTextStyles.body2,
+                                  ),
+                                ],
+                              ),
+                            ),
                             const SizedBox(height: 24),
                             Row(
                               children: [

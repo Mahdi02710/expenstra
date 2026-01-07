@@ -38,7 +38,14 @@ class Budget {
   double get percentage => limit > 0 ? (spent / limit).clamp(0.0, 1.0) : 0.0;
   double get remaining => (limit - spent).clamp(0.0, double.infinity);
   bool get isOverBudget => spent > limit;
-  bool get isNearLimit => alertThreshold != null && percentage >= alertThreshold!;
+  bool get isNearLimit {
+    // Check if near limit either by alertThreshold or by percentage (>80%)
+    if (alertThreshold != null) {
+      return percentage >= alertThreshold!;
+    }
+    // Default: consider near limit if over 80%
+    return percentage >= 0.8;
+  }
 
   String get periodLabel {
     switch (period) {
@@ -65,8 +72,10 @@ class Budget {
   String get status {
     if (isOverBudget) {
       return 'Over Budget';
-    } else if (percentage > 0.9) {
+    } else if (percentage >= 0.9) {
       return 'Almost Exceeded';
+    } else if (percentage >= 0.8) {
+      return 'Near Limit';
     } else if (percentage > 0.7) {
       return 'On Track';
     } else if (percentage > 0.5) {
@@ -79,7 +88,9 @@ class Budget {
   String get statusEmoji {
     if (isOverBudget) {
       return '🚨';
-    } else if (percentage > 0.9) {
+    } else if (percentage >= 0.9) {
+      return '⚠️';
+    } else if (percentage >= 0.8) {
       return '⚠️';
     } else if (percentage > 0.7) {
       return '📊';
