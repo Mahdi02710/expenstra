@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:expensetra/core/theme/app_colors.dart';
 import 'package:expensetra/core/theme/app_text_styles.dart';
 import 'package:expensetra/data/services/auth_service.dart';

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../data/models/transaction.dart';
-import '../../../data/models/wallet.dart';
 import '../../../data/services/data_service.dart';
 
 class TransferForm extends StatefulWidget {

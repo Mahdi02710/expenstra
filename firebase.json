@@ -1,1 +1,28 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"expenstra","appId":"1:959459418560:android:30cb5b143b4bfff1536825","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"expenstra","configurations":{"android":"1:959459418560:android:30cb5b143b4bfff1536825","ios":"1:959459418560:ios:518be988efa7e70c536825","macos":"1:959459418560:ios:518be988efa7e70c536825","web":"1:959459418560:web:6e90766d2bb5a31a536825","windows":"1:959459418560:web:652c87ff30a59363536825"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "expenstra",
+          "appId": "1:959459418560:android:30cb5b143b4bfff1536825",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "expenstra",
+          "configurations": {
+            "android": "1:959459418560:android:30cb5b143b4bfff1536825",
+            "ios": "1:959459418560:ios:518be988efa7e70c536825",
+            "macos": "1:959459418560:ios:518be988efa7e70c536825",
+            "web": "1:959459418560:web:6e90766d2bb5a31a536825",
+            "windows": "1:959459418560:web:652c87ff30a59363536825"
+          }
+        }
+      }
+    }
+  }
+}

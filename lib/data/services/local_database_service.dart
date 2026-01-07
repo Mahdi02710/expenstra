@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqflite.dart' hide Transaction;
 import 'package:path/path.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
 
 class LocalDatabaseService {
-  static final LocalDatabaseService _instance = LocalDatabaseService._internal();
+  static final LocalDatabaseService _instance =
+      LocalDatabaseService._internal();
   factory LocalDatabaseService() => _instance;
   LocalDatabaseService._internal();
 
@@ -113,12 +114,24 @@ class LocalDatabaseService {
     ''');
 
     // Create indexes for better query performance
-    await db.execute('CREATE INDEX idx_transactions_date ON $_transactionsTable(date DESC)');
-    await db.execute('CREATE INDEX idx_transactions_wallet ON $_transactionsTable(walletId)');
-    await db.execute('CREATE INDEX idx_transactions_synced ON $_transactionsTable(synced)');
-    await db.execute('CREATE INDEX idx_wallets_synced ON $_walletsTable(synced)');
-    await db.execute('CREATE INDEX idx_budgets_synced ON $_budgetsTable(synced)');
-    await db.execute('CREATE INDEX idx_sync_queue ON $_syncTable(tableName, recordId)');
+    await db.execute(
+      'CREATE INDEX idx_transactions_date ON $_transactionsTable(date DESC)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_transactions_wallet ON $_transactionsTable(walletId)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_transactions_synced ON $_transactionsTable(synced)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_wallets_synced ON $_walletsTable(synced)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_budgets_synced ON $_budgetsTable(synced)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_sync_queue ON $_syncTable(tableName, recordId)',
+    );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -128,34 +141,36 @@ class LocalDatabaseService {
     }
   }
 
-  // ==========================================
   // TRANSACTIONS
-  // ==========================================
 
-  Future<void> insertTransaction(Transaction transaction, {bool synced = false}) async {
+  Future<void> insertTransaction(
+    Transaction transaction, {
+    bool synced = false,
+  }) async {
     final db = await database;
-    await db.insert(
-      _transactionsTable,
-      {
-        'id': transaction.id,
-        'type': transaction.type.name,
-        'amount': transaction.amount,
-        'description': transaction.description,
-        'category': transaction.category,
-        'icon': transaction.icon,
-        'date': transaction.date.millisecondsSinceEpoch,
-        'walletId': transaction.walletId,
-        'note': transaction.note,
-        'tags': transaction.tags?.join(','),
-        'synced': synced ? 1 : 0,
-        'createdAt': DateTime.now().millisecondsSinceEpoch,
-        'updatedAt': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(_transactionsTable, {
+      'id': transaction.id,
+      'type': transaction.type.name,
+      'amount': transaction.amount,
+      'description': transaction.description,
+      'category': transaction.category,
+      'icon': transaction.icon,
+      'date': transaction.date.millisecondsSinceEpoch,
+      'walletId': transaction.walletId,
+      'note': transaction.note,
+      'tags': transaction.tags?.join(','),
+      'synced': synced ? 1 : 0,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     if (!synced) {
-      await _addToSyncQueue(_transactionsTable, transaction.id, 'insert', transaction.toMapForLocal());
+      await _addToSyncQueue(
+        _transactionsTable,
+        transaction.id,
+        'insert',
+        transaction.toMapForLocal(),
+      );
     }
   }
 
@@ -166,28 +181,34 @@ class LocalDatabaseService {
       orderBy: 'date DESC',
     );
 
-    return List.generate(maps.length, (i) {
+    return List<Transaction>.generate(maps.length, (i) {
       return Transaction(
-        id: maps[i]['id'],
+        id: maps[i]['id'] as String,
         type: TransactionType.values.firstWhere(
-          (e) => e.name == maps[i]['type'],
+          (e) => e.name == maps[i]['type'] as String,
           orElse: () => TransactionType.expense,
         ),
-        amount: maps[i]['amount'],
-        description: maps[i]['description'],
-        category: maps[i]['category'],
-        icon: maps[i]['icon'],
-        date: DateTime.fromMillisecondsSinceEpoch(maps[i]['date']),
-        walletId: maps[i]['walletId'],
-        note: maps[i]['note'],
+        amount: (maps[i]['amount'] as num).toDouble(),
+        description: maps[i]['description'] as String,
+        category: maps[i]['category'] as String,
+        icon: maps[i]['icon'] as String,
+        date: DateTime.fromMillisecondsSinceEpoch(maps[i]['date'] as int),
+        walletId: maps[i]['walletId'] as String,
+        note: maps[i]['note'] as String?,
         tags: maps[i]['tags'] != null
-            ? (maps[i]['tags'] as String).split(',').where((t) => t.isNotEmpty).toList()
+            ? (maps[i]['tags'] as String)
+                  .split(',')
+                  .where((t) => t.isNotEmpty)
+                  .toList()
             : null,
       );
     });
   }
 
-  Future<void> updateTransaction(Transaction transaction, {bool synced = false}) async {
+  Future<void> updateTransaction(
+    Transaction transaction, {
+    bool synced = false,
+  }) async {
     final db = await database;
     await db.update(
       _transactionsTable,
@@ -209,17 +230,18 @@ class LocalDatabaseService {
     );
 
     if (!synced) {
-      await _addToSyncQueue(_transactionsTable, transaction.id, 'update', transaction.toMapForLocal());
+      await _addToSyncQueue(
+        _transactionsTable,
+        transaction.id,
+        'update',
+        transaction.toMapForLocal(),
+      );
     }
   }
 
   Future<void> deleteTransaction(String id, {bool synced = false}) async {
     final db = await database;
-    await db.delete(
-      _transactionsTable,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete(_transactionsTable, where: 'id = ?', whereArgs: [id]);
 
     if (!synced) {
       await _addToSyncQueue(_transactionsTable, id, 'delete', null);
@@ -266,26 +288,22 @@ class LocalDatabaseService {
 
   Future<void> insertWallet(Wallet wallet, {bool synced = false}) async {
     final db = await database;
-    await db.insert(
-      _walletsTable,
-      {
-        'id': wallet.id,
-        'name': wallet.name,
-        'balance': wallet.balance,
-        'type': wallet.type.toString(),
-        'icon': wallet.icon,
-        'color': wallet.color,
-        'accountNumber': wallet.accountNumber,
-        'bankName': wallet.bankName,
-        'creditLimit': wallet.creditLimit,
-        'isActive': wallet.isActive ? 1 : 0,
-        'createdAt': wallet.createdAt.millisecondsSinceEpoch,
-        'lastTransactionDate': wallet.lastTransactionDate?.millisecondsSinceEpoch,
-        'synced': synced ? 1 : 0,
-        'updatedAt': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(_walletsTable, {
+      'id': wallet.id,
+      'name': wallet.name,
+      'balance': wallet.balance,
+      'type': wallet.type.toString(),
+      'icon': wallet.icon,
+      'color': wallet.color,
+      'accountNumber': wallet.accountNumber,
+      'bankName': wallet.bankName,
+      'creditLimit': wallet.creditLimit,
+      'isActive': wallet.isActive ? 1 : 0,
+      'createdAt': wallet.createdAt.millisecondsSinceEpoch,
+      'lastTransactionDate': wallet.lastTransactionDate?.millisecondsSinceEpoch,
+      'synced': synced ? 1 : 0,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     if (!synced) {
       await _addToSyncQueue(_walletsTable, wallet.id, 'insert', wallet.toMap());
@@ -296,22 +314,28 @@ class LocalDatabaseService {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(_walletsTable);
 
-    return List.generate(maps.length, (i) {
+    return List<Wallet>.generate(maps.length, (i) {
       return Wallet.fromMap({
-        'name': maps[i]['name'],
-        'balance': maps[i]['balance'],
-        'type': maps[i]['type'],
-        'icon': maps[i]['icon'],
-        'color': maps[i]['color'],
-        'accountNumber': maps[i]['accountNumber'],
-        'bankName': maps[i]['bankName'],
-        'creditLimit': maps[i]['creditLimit'],
-        'isActive': maps[i]['isActive'] == 1,
-        'createdAt': DateTime.fromMillisecondsSinceEpoch(maps[i]['createdAt']),
-        'lastTransactionDate': maps[i]['lastTransactionDate'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(maps[i]['lastTransactionDate'])
+        'name': maps[i]['name'] as String,
+        'balance': (maps[i]['balance'] as num).toDouble(),
+        'type': maps[i]['type'] as String,
+        'icon': maps[i]['icon'] as String,
+        'color': maps[i]['color'] as String,
+        'accountNumber': maps[i]['accountNumber'] as String?,
+        'bankName': maps[i]['bankName'] as String?,
+        'creditLimit': maps[i]['creditLimit'] != null
+            ? (maps[i]['creditLimit'] as num).toDouble()
             : null,
-      }, maps[i]['id']);
+        'isActive': (maps[i]['isActive'] as int) == 1,
+        'createdAt': DateTime.fromMillisecondsSinceEpoch(
+          maps[i]['createdAt'] as int,
+        ),
+        'lastTransactionDate': maps[i]['lastTransactionDate'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                maps[i]['lastTransactionDate'] as int,
+              )
+            : null,
+      }, maps[i]['id'] as String);
     });
   }
 
@@ -329,7 +353,8 @@ class LocalDatabaseService {
         'bankName': wallet.bankName,
         'creditLimit': wallet.creditLimit,
         'isActive': wallet.isActive ? 1 : 0,
-        'lastTransactionDate': wallet.lastTransactionDate?.millisecondsSinceEpoch,
+        'lastTransactionDate':
+            wallet.lastTransactionDate?.millisecondsSinceEpoch,
         'synced': synced ? 1 : 0,
         'updatedAt': DateTime.now().millisecondsSinceEpoch,
       },
@@ -344,11 +369,7 @@ class LocalDatabaseService {
 
   Future<void> deleteWallet(String id, {bool synced = false}) async {
     final db = await database;
-    await db.delete(
-      _walletsTable,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete(_walletsTable, where: 'id = ?', whereArgs: [id]);
 
     if (!synced) {
       await _addToSyncQueue(_walletsTable, id, 'delete', null);
@@ -371,28 +392,24 @@ class LocalDatabaseService {
 
   Future<void> insertBudget(Budget budget, {bool synced = false}) async {
     final db = await database;
-    await db.insert(
-      _budgetsTable,
-      {
-        'id': budget.id,
-        'name': budget.name,
-        'spent': budget.spent,
-        'limit': budget.limit,
-        'icon': budget.icon,
-        'color': budget.color,
-        'period': budget.period.name,
-        'category': budget.category,
-        'startDate': budget.startDate.millisecondsSinceEpoch,
-        'endDate': budget.endDate.millisecondsSinceEpoch,
-        'isActive': budget.isActive ? 1 : 0,
-        'alertThreshold': budget.alertThreshold,
-        'includedCategories': budget.includedCategories?.join(','),
-        'synced': synced ? 1 : 0,
-        'createdAt': DateTime.now().millisecondsSinceEpoch,
-        'updatedAt': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(_budgetsTable, {
+      'id': budget.id,
+      'name': budget.name,
+      'spent': budget.spent,
+      'limit': budget.limit,
+      'icon': budget.icon,
+      'color': budget.color,
+      'period': budget.period.name,
+      'category': budget.category,
+      'startDate': budget.startDate.millisecondsSinceEpoch,
+      'endDate': budget.endDate.millisecondsSinceEpoch,
+      'isActive': budget.isActive ? 1 : 0,
+      'alertThreshold': budget.alertThreshold,
+      'includedCategories': budget.includedCategories?.join(','),
+      'synced': synced ? 1 : 0,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     if (!synced) {
       await _addToSyncQueue(_budgetsTable, budget.id, 'insert', budget.toMap());
@@ -408,21 +425,32 @@ class LocalDatabaseService {
       orderBy: 'startDate DESC',
     );
 
-    return List.generate(maps.length, (i) {
+    return List<Budget>.generate(maps.length, (i) {
       return Budget.fromMap({
-        'name': maps[i]['name'],
-        'spent': maps[i]['spent'],
-        'limit': maps[i]['limit'],
-        'icon': maps[i]['icon'],
-        'color': maps[i]['color'],
-        'period': maps[i]['period'],
-        'category': maps[i]['category'],
-        'startDate': DateTime.fromMillisecondsSinceEpoch(maps[i]['startDate']),
-        'endDate': DateTime.fromMillisecondsSinceEpoch(maps[i]['endDate']),
-        'isActive': maps[i]['isActive'] == 1,
-        'alertThreshold': maps[i]['alertThreshold'],
-        'includedCategories': maps[i]['includedCategories'],
-      }, maps[i]['id']);
+        'name': maps[i]['name'] as String,
+        'spent': (maps[i]['spent'] as num).toDouble(),
+        'limit': (maps[i]['limit'] as num).toDouble(),
+        'icon': maps[i]['icon'] as String,
+        'color': maps[i]['color'] as String,
+        'period': maps[i]['period'] as String,
+        'category': maps[i]['category'] as String,
+        'startDate': DateTime.fromMillisecondsSinceEpoch(
+          maps[i]['startDate'] as int,
+        ),
+        'endDate': DateTime.fromMillisecondsSinceEpoch(
+          maps[i]['endDate'] as int,
+        ),
+        'isActive': (maps[i]['isActive'] as int) == 1,
+        'alertThreshold': maps[i]['alertThreshold'] != null
+            ? (maps[i]['alertThreshold'] as num).toDouble()
+            : null,
+        'includedCategories': maps[i]['includedCategories'] != null
+            ? (maps[i]['includedCategories'] as String)
+                  .split(',')
+                  .where((c) => c.isNotEmpty)
+                  .toList()
+            : null,
+      }, maps[i]['id'] as String);
     });
   }
 
@@ -457,11 +485,7 @@ class LocalDatabaseService {
 
   Future<void> deleteBudget(String id, {bool synced = false}) async {
     final db = await database;
-    await db.delete(
-      _budgetsTable,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete(_budgetsTable, where: 'id = ?', whereArgs: [id]);
 
     if (!synced) {
       await _addToSyncQueue(_budgetsTable, id, 'delete', null);
@@ -489,16 +513,13 @@ class LocalDatabaseService {
     Map<String, dynamic>? data,
   ) async {
     final db = await database;
-    await db.insert(
-      _syncTable,
-      {
-        'tableName': tableName,
-        'recordId': recordId,
-        'operation': operation,
-        'data': data != null ? data.toString() : null, // Store as string for simplicity
-        'createdAt': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
+    await db.insert(_syncTable, {
+      'tableName': tableName,
+      'recordId': recordId,
+      'operation': operation,
+      'data': data?.toString(), // Store as string for simplicity
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+    });
   }
 
   Future<List<Map<String, dynamic>>> getSyncQueue() async {
@@ -533,4 +554,3 @@ class LocalDatabaseService {
     await db.close();
   }
 }
-

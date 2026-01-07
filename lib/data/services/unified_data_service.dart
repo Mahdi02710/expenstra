@@ -18,7 +18,8 @@ class UnifiedDataService {
   final SyncService _syncService = SyncService();
   final FirestoreService _firestoreService = FirestoreService();
 
-  final _transactionsController = StreamController<List<Transaction>>.broadcast();
+  final _transactionsController =
+      StreamController<List<Transaction>>.broadcast();
   final _walletsController = StreamController<List<Wallet>>.broadcast();
   final _budgetsController = StreamController<List<Budget>>.broadcast();
 
@@ -64,11 +65,17 @@ class UnifiedDataService {
   Stream<List<Transaction>> getTransactions() {
     // Emit initial data from local DB
     _localDb.getTransactions().then((transactions) {
-      _transactionsController.add(transactions);
+      if (!_transactionsController.isClosed) {
+        _transactionsController.add(transactions);
+      }
     });
 
     // Periodically update from local DB
     Timer.periodic(const Duration(seconds: 2), (timer) async {
+      if (_transactionsController.isClosed) {
+        timer.cancel();
+        return;
+      }
       final transactions = await _localDb.getTransactions();
       if (!_transactionsController.isClosed) {
         _transactionsController.add(transactions);
@@ -241,4 +248,3 @@ class UnifiedDataService {
     _budgetsController.add([]);
   }
 }
-

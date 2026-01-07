@@ -7,7 +7,7 @@ class AppTheme {
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    primaryColor: AppColors.primary,
+    primaryColor: const Color(0xFF163473),
     scaffoldBackgroundColor: AppColors.background,
     fontFamily: 'Inter',
 
@@ -17,7 +17,7 @@ class AppTheme {
       onPrimary: Colors.white,
       secondary: AppColors.secondary,
       onSecondary: Colors.white,
-      tertiary: AppColors.gold,
+      tertiary: Color(0xFFD2AB17),
       onTertiary: AppColors.navy,
       surface: AppColors.surface,
       onSurface: AppColors.textPrimary,
