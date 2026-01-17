@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../data/services/firestore_service.dart';
+import '../../data/services/unified_data_service.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/wallet.dart';
 import 'widgets/spending_chart.dart';
@@ -17,7 +17,7 @@ class ActivityScreen extends StatefulWidget {
 
 class _ActivityScreenState extends State<ActivityScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final UnifiedDataService _unifiedService = UnifiedDataService();
   final ScrollController _scrollController = ScrollController();
   late TabController _tabController;
 
@@ -135,7 +135,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       onRefresh: _onRefresh,
       color: AppColors.primary,
       child: StreamBuilder<List<Transaction>>(
-        stream: _firestoreService.getTransactions(),
+        stream: _unifiedService.getTransactions(),
         builder: (context, transactionsSnapshot) {
           if (transactionsSnapshot.hasError) {
             return SingleChildScrollView(
@@ -239,7 +239,7 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   Widget _buildCategoriesTab() {
     return StreamBuilder<List<Transaction>>(
-      stream: _firestoreService.getTransactions(),
+      stream: _unifiedService.getTransactions(),
       builder: (context, transactionsSnapshot) {
         if (transactionsSnapshot.hasError) {
           return SingleChildScrollView(
@@ -341,7 +341,7 @@ class _ActivityScreenState extends State<ActivityScreen>
         : 0.0;
 
     return StreamBuilder<List<Wallet>>(
-      stream: _firestoreService.getWallets(),
+      stream: _unifiedService.getWallets(),
       builder: (context, walletsSnapshot) {
         final walletCount = walletsSnapshot.data?.length ?? 0;
 

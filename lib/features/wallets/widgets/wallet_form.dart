@@ -24,6 +24,7 @@ class _WalletFormState extends State<WalletForm> {
   late WalletType _type;
   String _selectedIcon = '💰';
   String _selectedColor = 'blue';
+  bool _isMonthlyRollover = false;
 
   // Wallet type configurations
   final Map<WalletType, Map<String, dynamic>> _walletTypes = {
@@ -72,6 +73,7 @@ class _WalletFormState extends State<WalletForm> {
       _type = wallet.type;
       _selectedIcon = wallet.icon;
       _selectedColor = wallet.color;
+      _isMonthlyRollover = wallet.isMonthlyRollover;
     }
   }
 
@@ -234,6 +236,20 @@ class _WalletFormState extends State<WalletForm> {
 
                 if (_type == WalletType.credit) const SizedBox(height: 16),
 
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Monthly rollover to savings'),
+                  subtitle: const Text(
+                    'Move remaining balance to a savings wallet each month',
+                  ),
+                  value: _isMonthlyRollover,
+                  onChanged: (value) {
+                    setState(() => _isMonthlyRollover = value);
+                  },
+                ),
+
+                const SizedBox(height: 8),
+
                 // Initial Balance
                 TextFormField(
                   controller: _initialBalanceController,
@@ -386,6 +402,9 @@ class _WalletFormState extends State<WalletForm> {
       isActive: widget.wallet?.isActive ?? true,
       createdAt: widget.wallet?.createdAt ?? DateTime.now(),
       lastTransactionDate: widget.wallet?.lastTransactionDate,
+      isMonthlyRollover: _isMonthlyRollover,
+      rolloverToWalletId: widget.wallet?.rolloverToWalletId,
+      lastRolloverAt: widget.wallet?.lastRolloverAt,
     );
 
     Navigator.of(context).pop(wallet);

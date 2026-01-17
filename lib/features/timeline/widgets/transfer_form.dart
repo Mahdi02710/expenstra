@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../data/services/data_service.dart';
+import '../../../data/models/wallet.dart';
+import '../../../data/services/unified_data_service.dart';
 
 class TransferForm extends StatefulWidget {
   const TransferForm({super.key});
@@ -17,18 +18,11 @@ class _TransferFormState extends State<TransferForm> {
 
   String? _fromWalletId;
   String? _toWalletId;
-  final DataService _dataService = DataService();
+  final UnifiedDataService _unifiedService = UnifiedDataService();
 
   @override
   void initState() {
     super.initState();
-    final wallets = _dataService.wallets;
-    if (wallets.length >= 2) {
-      _fromWalletId = wallets[0].id;
-      _toWalletId = wallets[1].id;
-    } else if (wallets.length == 1) {
-      _fromWalletId = wallets[0].id;
-    }
   }
 
   @override
@@ -40,176 +34,206 @@ class _TransferFormState extends State<TransferForm> {
 
   @override
   Widget build(BuildContext context) {
-    final wallets = _dataService.wallets;
+    return StreamBuilder<List<Wallet>>(
+      stream: _unifiedService.getWallets(),
+      builder: (context, snapshot) {
+        final wallets = snapshot.data ?? [];
+        if (_fromWalletId == null && wallets.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            setState(() {
+              _fromWalletId = wallets.first.id;
+              if (wallets.length > 1) {
+                _toWalletId = wallets[1].id;
+              }
+            });
+          });
+        }
 
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Transfer Money',
-                    style: AppTextStyles.h3.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
-                    ),
+        return Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-
-            // Form fields
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // From Wallet
-                    _buildWalletSelector(
-                      label: 'From',
-                      selectedWalletId: _fromWalletId,
-                      onSelected: (id) => setState(() => _fromWalletId = id),
-                      excludeWalletId: _toWalletId,
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Transfer icon
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.arrow_downward,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // To Wallet
-                    _buildWalletSelector(
-                      label: 'To',
-                      selectedWalletId: _toWalletId,
-                      onSelected: (id) => setState(() => _toWalletId = id),
-                      excludeWalletId: _fromWalletId,
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Amount
-                    TextFormField(
-                      controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: 'Amount',
-                        prefixText: '\$ ',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Theme.of(context).brightness == Brightness.dark
-                            ? AppColors.darkInputBackground
-                            : AppColors.inputBackground,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter an amount';
-                        }
-                        final amount = double.tryParse(value);
-                        if (amount == null || amount <= 0) {
-                          return 'Please enter a valid amount';
-                        }
-                        if (_fromWalletId != null) {
-                          final fromWallet = _dataService.getWallet(_fromWalletId!);
-                          if (fromWallet != null && amount > fromWallet.balance) {
-                            return 'Insufficient balance';
-                          }
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Note (optional)
-                    TextFormField(
-                      controller: _noteController,
-                      decoration: InputDecoration(
-                        labelText: 'Note (optional)',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Theme.of(context).brightness == Brightness.dark
-                            ? AppColors.darkInputBackground
-                            : AppColors.inputBackground,
-                      ),
-                      maxLines: 2,
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Submit button
-                    ElevatedButton(
-                      onPressed: _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Transfer',
-                        style: AppTextStyles.buttonLarge,
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                  ],
                 ),
-              ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Transfer Money',
+                        style: AppTextStyles.h3.copyWith(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Form fields
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // From Wallet
+                        _buildWalletSelector(
+                          label: 'From',
+                          selectedWalletId: _fromWalletId,
+                          onSelected: (id) =>
+                              setState(() => _fromWalletId = id),
+                          excludeWalletId: _toWalletId,
+                          wallets: wallets,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Transfer icon
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.arrow_downward,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // To Wallet
+                        _buildWalletSelector(
+                          label: 'To',
+                          selectedWalletId: _toWalletId,
+                          onSelected: (id) => setState(() => _toWalletId = id),
+                          excludeWalletId: _fromWalletId,
+                          wallets: wallets,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Amount
+                        TextFormField(
+                          controller: _amountController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Amount',
+                            prefixText: '\$ ',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? AppColors.darkInputBackground
+                                : AppColors.inputBackground,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter an amount';
+                            }
+                            final amount = double.tryParse(value);
+                            if (amount == null || amount <= 0) {
+                              return 'Please enter a valid amount';
+                            }
+                            if (_fromWalletId != null) {
+                              final fromWallet = _findWallet(
+                                wallets,
+                                _fromWalletId!,
+                              );
+                              if (fromWallet != null &&
+                                  amount > fromWallet.balance) {
+                                return 'Insufficient balance';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Note (optional)
+                        TextFormField(
+                          controller: _noteController,
+                          decoration: InputDecoration(
+                            labelText: 'Note (optional)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? AppColors.darkInputBackground
+                                : AppColors.inputBackground,
+                          ),
+                          maxLines: 2,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Submit button
+                        ElevatedButton(
+                          onPressed: _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Transfer',
+                            style: AppTextStyles.buttonLarge,
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -218,12 +242,13 @@ class _TransferFormState extends State<TransferForm> {
     required String? selectedWalletId,
     required Function(String) onSelected,
     String? excludeWalletId,
+    required List<Wallet> wallets,
   }) {
-    final wallets = _dataService.wallets
+    final filteredWallets = wallets
         .where((w) => w.id != excludeWalletId)
         .toList();
 
-    if (wallets.isEmpty) {
+    if (filteredWallets.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -239,11 +264,12 @@ class _TransferFormState extends State<TransferForm> {
     }
 
     final selectedWallet = selectedWalletId != null
-        ? _dataService.getWallet(selectedWalletId)
+        ? _findWallet(wallets, selectedWalletId)
         : null;
 
     return InkWell(
-      onTap: () => _showWalletPicker(label, onSelected, excludeWalletId),
+      onTap: () =>
+          _showWalletPicker(label, onSelected, excludeWalletId, wallets),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -251,9 +277,7 @@ class _TransferFormState extends State<TransferForm> {
               ? AppColors.darkInputBackground
               : AppColors.inputBackground,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).dividerColor,
-          ),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           children: [
@@ -311,8 +335,9 @@ class _TransferFormState extends State<TransferForm> {
     String label,
     Function(String) onSelected,
     String? excludeWalletId,
+    List<Wallet> wallets,
   ) {
-    final wallets = _dataService.wallets
+    final filteredWallets = wallets
         .where((w) => w.id != excludeWalletId)
         .toList();
 
@@ -340,13 +365,18 @@ class _TransferFormState extends State<TransferForm> {
             ),
             ListView.builder(
               shrinkWrap: true,
-              itemCount: wallets.length,
+              itemCount: filteredWallets.length,
               itemBuilder: (context, index) {
-                final wallet = wallets[index];
-                final isSelected = wallet.id == (label == 'From' ? _fromWalletId : _toWalletId);
+                final wallet = filteredWallets[index];
+                final isSelected =
+                    wallet.id ==
+                    (label == 'From' ? _fromWalletId : _toWalletId);
 
                 return ListTile(
-                  leading: Text(wallet.icon, style: const TextStyle(fontSize: 32)),
+                  leading: Text(
+                    wallet.icon,
+                    style: const TextStyle(fontSize: 32),
+                  ),
                   title: Text(wallet.name),
                   subtitle: Text(wallet.formattedBalance),
                   trailing: isSelected
@@ -364,6 +394,14 @@ class _TransferFormState extends State<TransferForm> {
         ),
       ),
     );
+  }
+
+  Wallet? _findWallet(List<Wallet> wallets, String id) {
+    try {
+      return wallets.firstWhere((wallet) => wallet.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   void _submit() {
@@ -394,4 +432,3 @@ class _TransferFormState extends State<TransferForm> {
     });
   }
 }
-

@@ -1,7 +1,13 @@
 import 'package:expensetra/core/theme/app_colors.dart';
 import 'package:expensetra/core/theme/app_text_styles.dart';
 import 'package:expensetra/data/services/auth_service.dart';
-import 'package:expensetra/data/services/firestore_service.dart';
+import 'package:expensetra/data/services/unified_data_service.dart';
+import 'package:expensetra/data/services/notification_service.dart';
+import 'package:expensetra/data/services/settings_service.dart';
+import 'package:expensetra/data/services/session_service.dart';
+import 'package:expensetra/data/services/sync_service.dart';
+import 'package:expensetra/data/services/category_service.dart';
+import 'package:expensetra/login_page/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -16,7 +22,12 @@ class MoreScreen extends StatefulWidget {
 class _MoreScreenState extends State<MoreScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final UnifiedDataService _unifiedService = UnifiedDataService();
+  final SettingsService _settingsService = SettingsService();
+  final NotificationService _notificationService = NotificationService();
+  final SessionService _sessionService = SessionService();
+  final SyncService _syncService = SyncService();
+  final CategoryService _categoryService = CategoryService();
 
   AnimationController? _headerAnimationController;
   AnimationController? _cardAnimationController;
@@ -73,6 +84,7 @@ class _MoreScreenState extends State<MoreScreen>
 
     _headerAnimationController!.forward();
     _cardAnimationController!.forward();
+    _currentThemeMode = _settingsService.themeMode.value;
   }
 
   @override
@@ -200,14 +212,14 @@ class _MoreScreenState extends State<MoreScreen>
                             _SettingsItem(
                               icon: Icons.security,
                               title: 'Security & Privacy',
-                              subtitle: 'Password, biometrics, and data settings',
-                              onTap: () => _showComingSoon('Security Settings'),
+                              subtitle: 'Passcode and biometrics',
+                              onTap: () => _showSecuritySettings(isDark),
                             ),
                             _SettingsItem(
                               icon: Icons.notifications_outlined,
                               title: 'Notifications',
-                              subtitle: 'Manage your notification preferences',
-                              onTap: () => _showComingSoon('Notification Settings'),
+                              subtitle: 'Reminders and budget alerts',
+                              onTap: () => _showNotificationSettings(isDark),
                             ),
                           ],
                           isDark,
@@ -225,14 +237,14 @@ class _MoreScreenState extends State<MoreScreen>
                           _SettingsItem(
                             icon: Icons.security,
                             title: 'Security & Privacy',
-                            subtitle: 'Password, biometrics, and data settings',
-                            onTap: () => _showComingSoon('Security Settings'),
+                            subtitle: 'Passcode and biometrics',
+                            onTap: () => _showSecuritySettings(isDark),
                           ),
                           _SettingsItem(
                             icon: Icons.notifications_outlined,
                             title: 'Notifications',
-                            subtitle: 'Manage your notification preferences',
-                            onTap: () => _showComingSoon('Notification Settings'),
+                            subtitle: 'Reminders and budget alerts',
+                            onTap: () => _showNotificationSettings(isDark),
                           ),
                         ],
                         isDark,
@@ -258,14 +270,14 @@ class _MoreScreenState extends State<MoreScreen>
                             _SettingsItem(
                               icon: Icons.language,
                               title: 'Language & Region',
-                              subtitle: 'Change app language and currency',
-                              onTap: () => _showComingSoon('Language Settings'),
+                              subtitle: 'Currency and exchange rates',
+                              onTap: () => _showCurrencySettings(isDark),
                             ),
                             _SettingsItem(
                               icon: Icons.backup_outlined,
                               title: 'Backup & Sync',
-                              subtitle: 'Cloud backup and device sync',
-                              onTap: () => _showComingSoon('Backup Settings'),
+                              subtitle: 'Manual backup and sync',
+                              onTap: () => _showBackupAndSync(isDark),
                             ),
                           ],
                           isDark,
@@ -283,14 +295,14 @@ class _MoreScreenState extends State<MoreScreen>
                           _SettingsItem(
                             icon: Icons.language,
                             title: 'Language & Region',
-                            subtitle: 'Change app language and currency',
-                            onTap: () => _showComingSoon('Language Settings'),
+                            subtitle: 'Currency and exchange rates',
+                            onTap: () => _showCurrencySettings(isDark),
                           ),
                           _SettingsItem(
                             icon: Icons.backup_outlined,
                             title: 'Backup & Sync',
-                            subtitle: 'Cloud backup and device sync',
-                            onTap: () => _showComingSoon('Backup Settings'),
+                            subtitle: 'Manual backup and sync',
+                            onTap: () => _showBackupAndSync(isDark),
                           ),
                         ],
                         isDark,
@@ -311,7 +323,7 @@ class _MoreScreenState extends State<MoreScreen>
                               icon: Icons.category_outlined,
                               title: 'Categories',
                               subtitle: 'Manage transaction categories',
-                              onTap: () => _showComingSoon('Category Management'),
+                              onTap: () => _showCategoryManager(isDark),
                             ),
                             _SettingsItem(
                               icon: Icons.import_export,
@@ -321,9 +333,9 @@ class _MoreScreenState extends State<MoreScreen>
                             ),
                             _SettingsItem(
                               icon: Icons.schedule,
-                              title: 'Recurring Transactions',
-                              subtitle: 'Set up automatic transactions',
-                              onTap: () => _showComingSoon('Recurring Transactions'),
+                              title: 'Recurring Wallets',
+                              subtitle: 'Monthly rollover settings',
+                              onTap: _showRecurringWalletInfo,
                             ),
                           ],
                           isDark,
@@ -336,7 +348,7 @@ class _MoreScreenState extends State<MoreScreen>
                             icon: Icons.category_outlined,
                             title: 'Categories',
                             subtitle: 'Manage transaction categories',
-                            onTap: () => _showComingSoon('Category Management'),
+                            onTap: () => _showCategoryManager(isDark),
                           ),
                           _SettingsItem(
                             icon: Icons.import_export,
@@ -346,9 +358,9 @@ class _MoreScreenState extends State<MoreScreen>
                           ),
                           _SettingsItem(
                             icon: Icons.schedule,
-                            title: 'Recurring Transactions',
-                            subtitle: 'Set up automatic transactions',
-                            onTap: () => _showComingSoon('Recurring Transactions'),
+                            title: 'Recurring Wallets',
+                            subtitle: 'Monthly rollover settings',
+                            onTap: _showRecurringWalletInfo,
                           ),
                         ],
                         isDark,
@@ -420,9 +432,9 @@ class _MoreScreenState extends State<MoreScreen>
                 child: _cardAnimation != null
                     ? FadeTransition(
                         opacity: _cardAnimation!,
-                        child: _buildLogoutButton(isDark),
+                        child: _buildAuthAction(user, isDark),
                       )
-                    : _buildLogoutButton(isDark),
+                    : _buildAuthAction(user, isDark),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -434,103 +446,110 @@ class _MoreScreenState extends State<MoreScreen>
   }
 
   Widget _buildHeader(User? user, bool isDark) {
-    final headerWidget = Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: isDark ? AppColors.goldGradient : AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: (isDark ? AppColors.gold : AppColors.primary)
-                .withValues(alpha: 0.3),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Avatar with animated border
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.4),
-                width: 3,
+    return ValueListenableBuilder<bool>(
+      valueListenable: _sessionService.isGuestMode,
+      builder: (context, isGuest, _) {
+        final headerWidget = Container(
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: isDark ? AppColors.goldGradient : AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: (isDark ? AppColors.gold : AppColors.primary)
+                    .withValues(alpha: 0.3),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
               ),
-            ),
-            child: user?.photoURL != null
-                ? ClipOval(
-                    child: Image.network(
-                      user!.photoURL!,
-                      fit: BoxFit.cover,
+            ],
+          ),
+          child: Row(
+            children: [
+              // Avatar with animated border
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    width: 3,
+                  ),
+                ),
+                child: user?.photoURL != null
+                    ? ClipOval(
+                        child: Image.network(
+                          user!.photoURL!,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 35,
+                      ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // User info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.displayName ??
+                          (isGuest ? 'Guest Mode' : 'Welcome Back!'),
+                      style: AppTextStyles.h3.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  )
-                : const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 35,
-                  ),
-          ),
 
-          const SizedBox(width: 16),
+                    const SizedBox(height: 4),
 
-          // User info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.displayName ?? 'Welcome Back!',
-                  style: AppTextStyles.h3.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
+                    Text(
+                      user?.email ??
+                          (isGuest ? 'Local-only data' : 'Not signed in'),
+                      style: AppTextStyles.body2.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
+              ),
 
-                const SizedBox(height: 4),
-
-                Text(
-                  user?.email ?? 'Not signed in',
-                  style: AppTextStyles.body2.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              // Settings icon
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
+                child: IconButton(
+                  onPressed: () => _showProfileSettings(user, isDark),
+                  icon: const Icon(Icons.settings, color: Colors.white),
+                ),
+              ),
+            ],
           ),
+        );
 
-          // Settings icon
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: () => _showProfileSettings(user, isDark),
-              icon: const Icon(Icons.settings, color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
+        if (_floatingAnimation == null) {
+          return headerWidget;
+        }
 
-    if (_floatingAnimation == null) {
-      return headerWidget;
-    }
-
-    return AnimatedBuilder(
-      animation: _floatingAnimation!,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _floatingAnimation!.value * 0.3),
-          child: headerWidget,
+        return AnimatedBuilder(
+          animation: _floatingAnimation!,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, _floatingAnimation!.value * 0.3),
+              child: headerWidget,
+            );
+          },
         );
       },
     );
@@ -538,13 +557,13 @@ class _MoreScreenState extends State<MoreScreen>
 
   Widget _buildQuickStats(bool isDark) {
     return StreamBuilder(
-      stream: _firestoreService.getTransactions(),
+      stream: _unifiedService.getTransactions(),
       builder: (context, transactionsSnapshot) {
         return StreamBuilder(
-          stream: _firestoreService.getWallets(),
+          stream: _unifiedService.getWallets(),
           builder: (context, walletsSnapshot) {
             return StreamBuilder(
-              stream: _firestoreService.getBudgets(),
+              stream: _unifiedService.getBudgets(),
               builder: (context, budgetsSnapshot) {
                 final transactions = transactionsSnapshot.data ?? [];
                 final wallets = walletsSnapshot.data ?? [];
@@ -870,6 +889,49 @@ class _MoreScreenState extends State<MoreScreen>
     );
   }
 
+  Widget _buildAuthAction(User? user, bool isDark) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _sessionService.isGuestMode,
+      builder: (context, isGuest, _) {
+        if (user != null) {
+          return _buildLogoutButton(isDark);
+        }
+        if (isGuest) {
+          return _buildLoginButton(isDark);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildLoginButton(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          await _sessionService.setGuestMode(false);
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+        },
+        icon: const Icon(Icons.login, size: 20),
+        label: const Text(
+          'Sign In',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isDark ? AppColors.gold : AppColors.primary,
+          foregroundColor: isDark ? AppColors.navy : Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showProfileSettings(User? user, bool isDark) {
     showModalBottomSheet(
       context: context,
@@ -911,23 +973,27 @@ class _MoreScreenState extends State<MoreScreen>
               leading: const Icon(Icons.person),
               title: const Text('Display Name'),
               subtitle: Text(user?.displayName ?? 'Not set'),
+              trailing: user == null
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showEditDisplayName(user, isDark);
+                      },
+                    ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _showComingSoon('Profile Editing');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? AppColors.gold : AppColors.primary,
-                foregroundColor: isDark ? AppColors.navy : Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            if (user == null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Sign in to edit profile details.',
+                style: AppTextStyles.body2.copyWith(
+                  color:
+                      isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
                 ),
+                textAlign: TextAlign.center,
               ),
-              child: const Text('Edit Profile'),
-            ),
+            ],
           ],
         ),
       ),
@@ -990,6 +1056,558 @@ class _MoreScreenState extends State<MoreScreen>
     );
   }
 
+  void _showSecuritySettings(bool isDark) async {
+    final existingPasscode = await _settingsService.getPasscode();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Security & Privacy',
+              style: AppTextStyles.h3.copyWith(
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.lock_outline),
+              title: const Text('App Passcode'),
+              subtitle: Text(
+                existingPasscode == null ? 'Not set' : 'Enabled',
+              ),
+              trailing: TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _promptPasscode(existingPasscode != null);
+                },
+                child: Text(existingPasscode == null ? 'Set' : 'Change'),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.fingerprint),
+              title: const Text('Biometrics'),
+              subtitle: const Text('Use device biometrics to unlock'),
+              trailing: Switch(
+                value: _settingsService.biometricsEnabled.value,
+                onChanged: (value) async {
+                  await _settingsService.setBiometricsEnabled(value);
+                  if (!mounted) return;
+                  setState(() {});
+                },
+              ),
+            ),
+            if (existingPasscode != null)
+              TextButton(
+                onPressed: () async {
+                  await _settingsService.setPasscode(null);
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Passcode removed'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                },
+                child: const Text('Remove Passcode'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationSettings(bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Notifications',
+              style: AppTextStyles.h3.copyWith(
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<bool>(
+              valueListenable: _settingsService.notificationsEnabled,
+              builder: (context, enabled, _) {
+                return SwitchListTile(
+                  title: const Text('Enable notifications'),
+                  subtitle: const Text('Show reminders and alerts'),
+                  value: enabled,
+                  onChanged: (value) async {
+                    await _settingsService.setNotificationsEnabled(value);
+                    if (!value) {
+                      await _notificationService.scheduleDailyReminder(
+                        enabled: false,
+                      );
+                    }
+                  },
+                );
+              },
+            ),
+            ValueListenableBuilder<bool>(
+              valueListenable: _settingsService.dailyReminderEnabled,
+              builder: (context, reminderEnabled, _) {
+                final notificationsEnabled =
+                    _settingsService.notificationsEnabled.value;
+                return SwitchListTile(
+                  title: const Text('Daily reminder'),
+                  subtitle: const Text('Get a daily expense check-in'),
+                  value: reminderEnabled,
+                  onChanged: notificationsEnabled
+                      ? (value) async {
+                          await _settingsService.setDailyReminderEnabled(value);
+                          await _notificationService.scheduleDailyReminder(
+                            enabled: value,
+                          );
+                        }
+                      : null,
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () {
+                _notificationService.showNotification(
+                  'ExpensTra',
+                  'This is a test notification.',
+                );
+              },
+              child: const Text('Send test notification'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCurrencySettings(bool isDark) {
+    final rateController = TextEditingController(
+      text: _settingsService.lbpRate.value.toStringAsFixed(0),
+    );
+    String selectedCurrency = _settingsService.defaultCurrency.value;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  'Currency & Exchange',
+                  style: AppTextStyles.h3.copyWith(
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedCurrency,
+                  items: const [
+                    DropdownMenuItem(value: 'USD', child: Text('USD')),
+                    DropdownMenuItem(value: 'LBP', child: Text('LBP')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setModalState(() => selectedCurrency = value);
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Default currency',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: rateController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'LBP per 1 USD',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    final rate = double.tryParse(rateController.text.trim());
+                    if (rate == null || rate <= 0) {
+                      return;
+                    }
+                    await _settingsService.setDefaultCurrency(selectedCurrency);
+                    await _settingsService.setLbpRate(rate);
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Currency settings saved'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showBackupAndSync(bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Backup & Sync',
+              style: AppTextStyles.h3.copyWith(
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your data stays local unless you press sync.',
+              style: AppTextStyles.body2.copyWith(
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () async {
+                await _syncService.syncAll();
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sync completed'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.cloud_sync),
+              label: const Text('Sync Now'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCategoryManager(bool isDark) async {
+    final customCategories = await _categoryService.getCustomCategories();
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Custom Categories',
+              style: AppTextStyles.h3.copyWith(
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (customCategories.isEmpty)
+              Text(
+                'No custom categories yet.',
+                style: AppTextStyles.body2.copyWith(
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: customCategories.length,
+                  itemBuilder: (context, index) {
+                    final item = customCategories[index];
+                    return ListTile(
+                      leading: Text(item.icon, style: const TextStyle(fontSize: 24)),
+                      title: Text(item.name),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () async {
+                          await _categoryService.removeCustomCategory(item.name);
+                          if (!mounted) return;
+                          Navigator.pop(context);
+                          _showCategoryManager(isDark);
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                _showAddCategoryFromMore();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Category'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddCategoryFromMore() {
+    final nameController = TextEditingController();
+    final iconController = TextEditingController(text: '⭐');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Category'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Category name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: iconController,
+              decoration: const InputDecoration(labelText: 'Icon / Emoji'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              final icon = iconController.text.trim();
+              if (name.isEmpty || icon.isEmpty) {
+                return;
+              }
+              await _categoryService.addCustomCategory(
+                CategoryItem(name: name, icon: icon),
+              );
+              if (!mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Category added'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRecurringWalletInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recurring Wallets'),
+        content: const Text(
+          'You can enable monthly rollover when adding or editing a wallet.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _promptPasscode(bool hasPasscode) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(hasPasscode ? 'Change Passcode' : 'Set Passcode'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: '4-digit passcode'),
+          keyboardType: TextInputType.number,
+          maxLength: 4,
+          obscureText: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final code = controller.text.trim();
+              if (code.length != 4) {
+                return;
+              }
+              await _settingsService.setPasscode(code);
+              if (!mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Passcode saved'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDisplayName(User user, bool isDark) {
+    final controller = TextEditingController(text: user.displayName ?? '');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Display Name'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Display name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              await user.updateDisplayName(name.isEmpty ? null : name);
+              if (!mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Profile updated'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+              setState(() {});
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildThemeOption(
     IconData icon,
     String label,
@@ -1012,15 +1630,12 @@ class _MoreScreenState extends State<MoreScreen>
             )
           : null,
       onTap: () {
-        setState(() {
-          _currentThemeMode = mode;
-        });
-        // Note: Theme switching would require MaterialApp rebuild
-        // This is a placeholder for future implementation
+        _settingsService.setThemeMode(mode);
+        setState(() => _currentThemeMode = mode);
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Theme preference saved (requires app restart)'),
+            content: Text('Theme updated'),
             backgroundColor: AppColors.success,
           ),
         );

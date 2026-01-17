@@ -16,6 +16,9 @@ class Wallet {
   final bool isActive;
   final DateTime createdAt;
   final DateTime? lastTransactionDate;
+  final bool isMonthlyRollover;
+  final String? rolloverToWalletId;
+  final DateTime? lastRolloverAt;
 
   const Wallet({
     required this.id,
@@ -30,6 +33,9 @@ class Wallet {
     this.isActive = true,
     required this.createdAt,
     this.lastTransactionDate,
+    this.isMonthlyRollover = false,
+    this.rolloverToWalletId,
+    this.lastRolloverAt,
   });
 
   // Helper getters
@@ -127,6 +133,11 @@ class Wallet {
       lastTransactionDate: json['lastTransactionDate'] != null
           ? DateTime.parse(json['lastTransactionDate'])
           : null,
+      isMonthlyRollover: json['isMonthlyRollover'] ?? false,
+      rolloverToWalletId: json['rolloverToWalletId'],
+      lastRolloverAt: json['lastRolloverAt'] != null
+          ? DateTime.parse(json['lastRolloverAt'])
+          : null,
     );
   }
 
@@ -144,6 +155,9 @@ class Wallet {
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'lastTransactionDate': lastTransactionDate?.toIso8601String(),
+      'isMonthlyRollover': isMonthlyRollover,
+      'rolloverToWalletId': rolloverToWalletId,
+      'lastRolloverAt': lastRolloverAt?.toIso8601String(),
     };
   }
 
@@ -164,6 +178,10 @@ class Wallet {
       'lastTransactionDate': lastTransactionDate != null
           ? Timestamp.fromDate(lastTransactionDate!)
           : null,
+      'isMonthlyRollover': isMonthlyRollover,
+      'rolloverToWalletId': rolloverToWalletId,
+      'lastRolloverAt':
+          lastRolloverAt != null ? Timestamp.fromDate(lastRolloverAt!) : null,
     };
   }
 
@@ -193,6 +211,13 @@ class Wallet {
               ? (map['lastTransactionDate'] as Timestamp).toDate()
               : DateTime.parse(map['lastTransactionDate'].toString()))
           : null,
+      isMonthlyRollover: map['isMonthlyRollover'] ?? false,
+      rolloverToWalletId: map['rolloverToWalletId'],
+      lastRolloverAt: map['lastRolloverAt'] != null
+          ? (map['lastRolloverAt'] is Timestamp
+              ? (map['lastRolloverAt'] as Timestamp).toDate()
+              : DateTime.parse(map['lastRolloverAt'].toString()))
+          : null,
     );
   }
 
@@ -210,6 +235,9 @@ class Wallet {
     bool? isActive,
     DateTime? createdAt,
     DateTime? lastTransactionDate,
+    bool? isMonthlyRollover,
+    String? rolloverToWalletId,
+    DateTime? lastRolloverAt,
   }) {
     return Wallet(
       id: id ?? this.id,
@@ -224,6 +252,9 @@ class Wallet {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       lastTransactionDate: lastTransactionDate ?? this.lastTransactionDate,
+      isMonthlyRollover: isMonthlyRollover ?? this.isMonthlyRollover,
+      rolloverToWalletId: rolloverToWalletId ?? this.rolloverToWalletId,
+      lastRolloverAt: lastRolloverAt ?? this.lastRolloverAt,
     );
   }
 

@@ -13,7 +13,7 @@ class LocalDatabaseService {
 
   static Database? _database;
   static const String _dbName = 'expensetra.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 3;
 
   // Table names
   static const String _transactionsTable = 'transactions';
@@ -46,6 +46,9 @@ class LocalDatabaseService {
         id TEXT PRIMARY KEY,
         type TEXT NOT NULL,
         amount REAL NOT NULL,
+        currencyCode TEXT DEFAULT 'USD',
+        originalAmount REAL,
+        exchangeRate REAL,
         description TEXT NOT NULL,
         category TEXT NOT NULL,
         icon TEXT NOT NULL,
@@ -74,6 +77,9 @@ class LocalDatabaseService {
         isActive INTEGER DEFAULT 1,
         createdAt INTEGER NOT NULL,
         lastTransactionDate INTEGER,
+        isMonthlyRollover INTEGER DEFAULT 0,
+        rolloverToWalletId TEXT,
+        lastRolloverAt INTEGER,
         synced INTEGER DEFAULT 0,
         updatedAt INTEGER NOT NULL
       )
@@ -137,7 +143,28 @@ class LocalDatabaseService {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Handle database migrations here if needed
     if (oldVersion < newVersion) {
-      // Add migration logic
+      if (oldVersion < 2) {
+        await db.execute(
+          'ALTER TABLE $_transactionsTable ADD COLUMN currencyCode TEXT DEFAULT "USD"',
+        );
+        await db.execute(
+          'ALTER TABLE $_transactionsTable ADD COLUMN originalAmount REAL',
+        );
+        await db.execute(
+          'ALTER TABLE $_transactionsTable ADD COLUMN exchangeRate REAL',
+        );
+      }
+      if (oldVersion < 3) {
+        await db.execute(
+          'ALTER TABLE $_walletsTable ADD COLUMN isMonthlyRollover INTEGER DEFAULT 0',
+        );
+        await db.execute(
+          'ALTER TABLE $_walletsTable ADD COLUMN rolloverToWalletId TEXT',
+        );
+        await db.execute(
+          'ALTER TABLE $_walletsTable ADD COLUMN lastRolloverAt INTEGER',
+        );
+      }
     }
   }
 
@@ -152,6 +179,9 @@ class LocalDatabaseService {
       'id': transaction.id,
       'type': transaction.type.name,
       'amount': transaction.amount,
+      'currencyCode': transaction.currencyCode,
+      'originalAmount': transaction.originalAmount,
+      'exchangeRate': transaction.exchangeRate,
       'description': transaction.description,
       'category': transaction.category,
       'icon': transaction.icon,
@@ -189,6 +219,13 @@ class LocalDatabaseService {
           orElse: () => TransactionType.expense,
         ),
         amount: (maps[i]['amount'] as num).toDouble(),
+        currencyCode: maps[i]['currencyCode'] as String? ?? 'USD',
+        originalAmount: maps[i]['originalAmount'] != null
+            ? (maps[i]['originalAmount'] as num).toDouble()
+            : null,
+        exchangeRate: maps[i]['exchangeRate'] != null
+            ? (maps[i]['exchangeRate'] as num).toDouble()
+            : null,
         description: maps[i]['description'] as String,
         category: maps[i]['category'] as String,
         icon: maps[i]['icon'] as String,
@@ -215,6 +252,9 @@ class LocalDatabaseService {
       {
         'type': transaction.type.name,
         'amount': transaction.amount,
+        'currencyCode': transaction.currencyCode,
+        'originalAmount': transaction.originalAmount,
+        'exchangeRate': transaction.exchangeRate,
         'description': transaction.description,
         'category': transaction.category,
         'icon': transaction.icon,
@@ -282,9 +322,7 @@ class LocalDatabaseService {
     );
   }
 
-  // ==========================================
   // WALLETS
-  // ==========================================
 
   Future<void> insertWallet(Wallet wallet, {bool synced = false}) async {
     final db = await database;
@@ -301,6 +339,9 @@ class LocalDatabaseService {
       'isActive': wallet.isActive ? 1 : 0,
       'createdAt': wallet.createdAt.millisecondsSinceEpoch,
       'lastTransactionDate': wallet.lastTransactionDate?.millisecondsSinceEpoch,
+      'isMonthlyRollover': wallet.isMonthlyRollover ? 1 : 0,
+      'rolloverToWalletId': wallet.rolloverToWalletId,
+      'lastRolloverAt': wallet.lastRolloverAt?.millisecondsSinceEpoch,
       'synced': synced ? 1 : 0,
       'updatedAt': DateTime.now().millisecondsSinceEpoch,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -335,6 +376,13 @@ class LocalDatabaseService {
                 maps[i]['lastTransactionDate'] as int,
               )
             : null,
+        'isMonthlyRollover': (maps[i]['isMonthlyRollover'] as int?) == 1,
+        'rolloverToWalletId': maps[i]['rolloverToWalletId'] as String?,
+        'lastRolloverAt': maps[i]['lastRolloverAt'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                maps[i]['lastRolloverAt'] as int,
+              )
+            : null,
       }, maps[i]['id'] as String);
     });
   }
@@ -355,6 +403,9 @@ class LocalDatabaseService {
         'isActive': wallet.isActive ? 1 : 0,
         'lastTransactionDate':
             wallet.lastTransactionDate?.millisecondsSinceEpoch,
+        'isMonthlyRollover': wallet.isMonthlyRollover ? 1 : 0,
+        'rolloverToWalletId': wallet.rolloverToWalletId,
+        'lastRolloverAt': wallet.lastRolloverAt?.millisecondsSinceEpoch,
         'synced': synced ? 1 : 0,
         'updatedAt': DateTime.now().millisecondsSinceEpoch,
       },
@@ -365,6 +416,34 @@ class LocalDatabaseService {
     if (!synced) {
       await _addToSyncQueue(_walletsTable, wallet.id, 'update', wallet.toMap());
     }
+  }
+
+  Future<double> calculateWalletBalance(String walletId) async {
+    final db = await database;
+    final walletRows = await db.query(
+      _walletsTable,
+      columns: ['balance'],
+      where: 'id = ?',
+      whereArgs: [walletId],
+      limit: 1,
+    );
+    double balance = 0.0;
+    if (walletRows.isNotEmpty) {
+      balance = (walletRows.first['balance'] as num).toDouble();
+    }
+
+    final txRows = await db.query(
+      _transactionsTable,
+      columns: ['type', 'amount'],
+      where: 'walletId = ?',
+      whereArgs: [walletId],
+    );
+    for (final tx in txRows) {
+      final type = tx['type'] as String;
+      final amount = (tx['amount'] as num).toDouble();
+      balance += type == 'income' ? amount : -amount;
+    }
+    return balance;
   }
 
   Future<void> deleteWallet(String id, {bool synced = false}) async {

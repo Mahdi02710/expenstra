@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:expensetra/core/theme/app_colors.dart';
 import 'package:expensetra/core/theme/app_text_styles.dart';
 import 'package:expensetra/data/services/auth_service.dart';
+import 'package:expensetra/data/services/session_service.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -31,6 +32,7 @@ class _LoginPageState extends State<LoginPage>
   late Animation<double> _floatingAnimation;
 
   final AuthService _authService = AuthService();
+  final SessionService _sessionService = SessionService();
 
   @override
   void initState() {
@@ -144,6 +146,76 @@ class _LoginPageState extends State<LoginPage>
       }
     } finally {
       if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final email = emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter your email to reset your password'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+    setState(() => isLoading = true);
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset email sent'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => isLoading = true);
+    try {
+      await _authService.signInWithGoogle();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _continueAsGuest() async {
+    await _sessionService.setGuestMode(true);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Continuing as guest (local-only mode)'),
+          backgroundColor: AppColors.success,
+        ),
+      );
     }
   }
 
@@ -385,10 +457,59 @@ class _LoginPageState extends State<LoginPage>
               isDark: isDark,
             ),
 
+            const SizedBox(height: 8),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: isLoading ? null : _handleForgotPassword,
+                child: Text(
+                  'Forgot password?',
+                  style: AppTextStyles.body2.copyWith(
+                    color: isDark ? AppColors.gold : AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 32),
 
             // Submit button
             _buildSubmitButton(isDark),
+
+            const SizedBox(height: 16),
+
+            // Google sign-in
+            OutlinedButton.icon(
+              onPressed: isLoading ? null : _handleGoogleSignIn,
+              icon: const Icon(Icons.g_mobiledata, size: 28),
+              label: const Text('Sign in with Google'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(
+                  color: isDark ? AppColors.gold : AppColors.primary,
+                ),
+                foregroundColor: isDark ? AppColors.gold : AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            TextButton(
+              onPressed: isLoading ? null : _continueAsGuest,
+              child: Text(
+                'Continue as guest',
+                style: AppTextStyles.buttonMedium.copyWith(
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ),
           ],
         ),
       ),

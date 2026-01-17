@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../data/services/data_service.dart';
-import '../../data/services/firestore_service.dart';
+import '../../data/services/unified_data_service.dart';
+import '../../data/services/settings_service.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/wallet.dart';
 import 'widgets/balance_card.dart';
@@ -19,9 +20,11 @@ class TimelineScreen extends StatefulWidget {
 
 class _TimelineScreenState extends State<TimelineScreen>
     with AutomaticKeepAliveClientMixin {
-  final DataService _dataService = DataService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final UnifiedDataService _unifiedService = UnifiedDataService();
+  final SettingsService _settingsService = SettingsService();
   final ScrollController _scrollController = ScrollController();
+  StreamSubscription<List<Wallet>>? _walletsSub;
+  List<Wallet> _walletsCache = [];
 
   // Search and filter state
   String _searchQuery = '';
@@ -33,7 +36,16 @@ class _TimelineScreenState extends State<TimelineScreen>
   bool get wantKeepAlive => true;
 
   @override
+  void initState() {
+    super.initState();
+    _walletsSub = _unifiedService.getWallets().listen((wallets) {
+      _walletsCache = wallets;
+    });
+  }
+
+  @override
   void dispose() {
+    _walletsSub?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -76,16 +88,17 @@ class _TimelineScreenState extends State<TimelineScreen>
             ),
 
             StreamBuilder<List<Wallet>>(
-              stream: _firestoreService.getWallets(),
+              stream: _unifiedService.getWallets(),
               builder: (context, walletsSnapshot) {
                 return StreamBuilder<List<Transaction>>(
-                  stream: _firestoreService.getTransactions(),
+                  stream: _unifiedService.getTransactions(),
                   builder: (context, transactionsSnapshot) {
                     double totalBalance = 0.0;
                     double thisMonthIncome = 0.0;
                     double thisMonthExpenses = 0.0;
 
-                    if (walletsSnapshot.hasData && transactionsSnapshot.hasData) {
+                    if (walletsSnapshot.hasData &&
+                        transactionsSnapshot.hasData) {
                       final wallets = walletsSnapshot.data!;
                       final transactions = transactionsSnapshot.data!;
                       final now = DateTime.now();
@@ -94,16 +107,17 @@ class _TimelineScreenState extends State<TimelineScreen>
                       // Calculate balances per wallet (initial balance + transactions)
                       final Map<String, double> walletBalances = {};
                       for (final wallet in wallets) {
-                        walletBalances[wallet.id] = wallet.balance; // Start with initial balance
+                        walletBalances[wallet.id] =
+                            wallet.balance; // Start with initial balance
                       }
 
                       for (final tx in transactions) {
                         // Update wallet balance
                         walletBalances[tx.walletId] =
                             (walletBalances[tx.walletId] ?? 0.0) +
-                                (tx.type == TransactionType.income
-                                    ? tx.amount
-                                    : -tx.amount);
+                            (tx.type == TransactionType.income
+                                ? tx.amount
+                                : -tx.amount);
 
                         // Calculate this month's income and expenses
                         if (tx.date.isAfter(thisMonthStart) ||
@@ -119,12 +133,14 @@ class _TimelineScreenState extends State<TimelineScreen>
                       // Calculate net worth from all wallets
                       // Net Worth = Assets (non-credit wallets) - Liabilities (credit card debt)
                       for (final wallet in wallets) {
-                        final balance = walletBalances[wallet.id] ?? wallet.balance;
+                        final balance =
+                            walletBalances[wallet.id] ?? wallet.balance;
                         if (wallet.type == WalletType.credit) {
                           // Credit cards: only negative balances count as debt (liabilities)
                           // Positive balances (available credit) don't count as assets
                           if (balance < 0) {
-                            totalBalance += balance; // Subtract debt (balance is negative)
+                            totalBalance +=
+                                balance; // Subtract debt (balance is negative)
                           }
                           // If balance >= 0, it's available credit, not an asset, so ignore it
                         } else {
@@ -208,7 +224,7 @@ class _TimelineScreenState extends State<TimelineScreen>
             const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
             StreamBuilder<List<Transaction>>(
-              stream: FirestoreService().getTransactions(),
+              stream: _unifiedService.getTransactions(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return SliverToBoxAdapter(
@@ -418,7 +434,7 @@ class _TimelineScreenState extends State<TimelineScreen>
             false;
       },
       onDismissed: (direction) {
-        _firestoreService
+        _unifiedService
             .deleteTransaction(tx.id)
             .then((_) {
               if (mounted) {
@@ -505,7 +521,7 @@ class _TimelineScreenState extends State<TimelineScreen>
       builder: (context) => TransactionForm(),
     ).then((result) {
       if (result != null && result is Transaction) {
-        _firestoreService
+        _unifiedService
             .addTransaction(result)
             .then((_) {
               if (mounted) {
@@ -542,7 +558,7 @@ class _TimelineScreenState extends State<TimelineScreen>
           const TransactionForm(initialType: TransactionType.income),
     ).then((result) {
       if (result != null && result is Transaction) {
-        _firestoreService
+        _unifiedService
             .addTransaction(result)
             .then((_) {
               if (mounted) {
@@ -577,7 +593,7 @@ class _TimelineScreenState extends State<TimelineScreen>
           const TransactionForm(initialType: TransactionType.expense),
     ).then((result) {
       if (result != null && result is Transaction) {
-        _firestoreService
+        _unifiedService
             .addTransaction(result)
             .then((_) {
               if (mounted) {
@@ -615,39 +631,41 @@ class _TimelineScreenState extends State<TimelineScreen>
         final toWalletId = result['toWalletId'] as String;
         final amount = result['amount'] as double;
         final note = result['note'] as String?;
+        final currencyCode = _settingsService.defaultCurrency.value;
 
         // Create two transactions: expense from source, income to destination
         final now = DateTime.now();
         final expenseTx = Transaction(
-          id: '',
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
           type: TransactionType.expense,
           amount: amount,
-          description:
-              'Transfer to ${_dataService.getWallet(toWalletId)?.name ?? "Wallet"}',
+          description: 'Transfer to ${_findWalletName(toWalletId) ?? "Wallet"}',
           category: 'Transfer',
           icon: '↗️',
           date: now,
           walletId: fromWalletId,
           note: note,
+          currencyCode: currencyCode,
         );
 
         final incomeTx = Transaction(
-          id: '',
+          id: (DateTime.now().microsecondsSinceEpoch + 1).toString(),
           type: TransactionType.income,
           amount: amount,
           description:
-              'Transfer from ${_dataService.getWallet(fromWalletId)?.name ?? "Wallet"}',
+              'Transfer from ${_findWalletName(fromWalletId) ?? "Wallet"}',
           category: 'Transfer',
           icon: '↙️',
           date: now,
           walletId: toWalletId,
           note: note,
+          currencyCode: currencyCode,
         );
 
         // Add both transactions
         Future.wait([
-              _firestoreService.addTransaction(expenseTx),
-              _firestoreService.addTransaction(incomeTx),
+              _unifiedService.addTransaction(expenseTx),
+              _unifiedService.addTransaction(incomeTx),
             ])
             .then((_) {
               if (mounted) {
@@ -890,7 +908,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                           }
                         },
                       ),
-                      ..._dataService.wallets.map(
+                      ..._walletsCache.map(
                         (wallet) => FilterChip(
                           label: Text('${wallet.icon} ${wallet.name}'),
                           selected: _filterWalletId == wallet.id,
@@ -933,7 +951,7 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   void _onTransactionTap(Transaction transaction) {
-    final wallet = _dataService.getWallet(transaction.walletId);
+    final wallet = _findWallet(transaction.walletId);
 
     showModalBottomSheet(
       context: context,
@@ -1083,7 +1101,7 @@ class _TimelineScreenState extends State<TimelineScreen>
           ),
           TextButton(
             onPressed: () {
-              _firestoreService
+              _unifiedService
                   .deleteTransaction(transaction.id)
                   .then((_) {
                     if (mounted) {
@@ -1134,7 +1152,7 @@ class _TimelineScreenState extends State<TimelineScreen>
           ),
           TextButton(
             onPressed: () {
-              _firestoreService
+              _unifiedService
                   .deleteTransaction(transaction.id)
                   .then((_) {
                     if (mounted) {
@@ -1166,5 +1184,17 @@ class _TimelineScreenState extends State<TimelineScreen>
         ],
       ),
     );
+  }
+
+  Wallet? _findWallet(String id) {
+    try {
+      return _walletsCache.firstWhere((wallet) => wallet.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _findWalletName(String id) {
+    return _findWallet(id)?.name;
   }
 }

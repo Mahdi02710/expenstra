@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../data/services/firestore_service.dart';
+import '../../data/services/unified_data_service.dart';
 import '../../data/models/wallet.dart';
 import '../../data/models/transaction.dart';
 import 'widgets/wallets_overview.dart';
@@ -17,7 +17,7 @@ class WalletsScreen extends StatefulWidget {
 
 class _WalletsScreenState extends State<WalletsScreen>
     with AutomaticKeepAliveClientMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final UnifiedDataService _unifiedService = UnifiedDataService();
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -72,10 +72,10 @@ class _WalletsScreenState extends State<WalletsScreen>
 
               // Wallets Overview
               StreamBuilder<List<Wallet>>(
-                stream: _firestoreService.getWallets(),
+                stream: _unifiedService.getWallets(),
                 builder: (context, walletsSnapshot) {
                   return StreamBuilder<List<Transaction>>(
-                    stream: _firestoreService.getTransactions(),
+                    stream: _unifiedService.getTransactions(),
                     builder: (context, transactionsSnapshot) {
                       double totalBalance = 0.0;
                       double totalDebt = 0.0;
@@ -170,10 +170,10 @@ class _WalletsScreenState extends State<WalletsScreen>
 
               // Wallet Grid
               StreamBuilder<List<Wallet>>(
-                stream: _firestoreService.getWallets(),
+                stream: _unifiedService.getWallets(),
                 builder: (context, walletsSnapshot) {
                   return StreamBuilder<List<Transaction>>(
-                    stream: _firestoreService.getTransactions(),
+                    stream: _unifiedService.getTransactions(),
                     builder: (context, transactionsSnapshot) {
                       if (walletsSnapshot.hasError) {
                         return SliverToBoxAdapter(
@@ -407,7 +407,7 @@ class _WalletsScreenState extends State<WalletsScreen>
 
   Widget _buildWalletDetailSheet(String walletId) {
     return StreamBuilder<List<Wallet>>(
-      stream: _firestoreService.getWallets(),
+      stream: _unifiedService.getWallets(),
       builder: (context, walletsSnapshot) {
         if (!walletsSnapshot.hasData) {
           return const SizedBox();
@@ -417,7 +417,7 @@ class _WalletsScreenState extends State<WalletsScreen>
             .firstWhere((w) => w.id == walletId, orElse: () => walletsSnapshot.data!.first);
         
         return StreamBuilder<List<Transaction>>(
-          stream: _firestoreService.getTransactions(),
+          stream: _unifiedService.getTransactions(),
           builder: (context, transactionsSnapshot) {
             final transactions = (transactionsSnapshot.data ?? [])
                 .where((tx) => tx.walletId == walletId)
@@ -639,7 +639,7 @@ class _WalletsScreenState extends State<WalletsScreen>
       builder: (context) => WalletForm(initialType: walletType),
     ).then((result) {
       if (result != null && result is Wallet) {
-        _firestoreService
+        _unifiedService
             .addWallet(result)
             .then((_) {
               if (mounted) {
@@ -674,7 +674,7 @@ class _WalletsScreenState extends State<WalletsScreen>
       builder: (context) => WalletForm(wallet: wallet),
     ).then((result) {
       if (result != null && result is Wallet) {
-        _firestoreService
+        _unifiedService
             .updateWallet(result)
             .then((_) {
               if (mounted) {
@@ -716,7 +716,7 @@ class _WalletsScreenState extends State<WalletsScreen>
           ),
           TextButton(
             onPressed: () {
-              _firestoreService
+              _unifiedService
                   .deleteWallet(wallet.id)
                   .then((_) {
                     if (mounted) {

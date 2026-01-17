@@ -4,8 +4,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/transaction.dart';
 import '../../../data/models/wallet.dart';
-import '../../../data/services/data_service.dart';
-import '../../../data/services/firestore_service.dart';
+import '../../../data/services/category_service.dart';
+import '../../../data/services/settings_service.dart';
+import '../../../data/services/unified_data_service.dart';
 
 class TransactionForm extends StatefulWidget {
   final TransactionType? initialType;
@@ -26,41 +27,37 @@ class _TransactionFormState extends State<TransactionForm> {
   late TransactionType _type;
   String _selectedCategory = 'Food & Drink';
   String _selectedIcon = '🍔';
+  String _selectedCurrency = 'USD';
   String _selectedWalletId = '';
   DateTime _selectedDate = DateTime.now();
-  final DataService _dataService = DataService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final UnifiedDataService _unifiedService = UnifiedDataService();
+  final CategoryService _categoryService = CategoryService();
+  final SettingsService _settingsService = SettingsService();
+  final List<String> _currencyOptions = ['USD', 'LBP'];
 
   // Common categories with icons
-  final List<Map<String, String>> _categories = [
-    {'name': 'Food & Drink', 'icon': '🍔'},
-    {'name': 'Transportation', 'icon': '🚗'},
-    {'name': 'Shopping', 'icon': '🛍️'},
-    {'name': 'Housing', 'icon': '🏠'},
-    {'name': 'Entertainment', 'icon': '🎬'},
-    {'name': 'Health & Fitness', 'icon': '💊'},
-    {'name': 'Education', 'icon': '📚'},
-    {'name': 'Bills & Utilities', 'icon': '💡'},
-    {'name': 'Income', 'icon': '💵'},
-    {'name': 'Other', 'icon': '💰'},
-  ];
+  List<CategoryItem> _categories = [];
 
   @override
   void initState() {
     super.initState();
     _type = widget.initialType ?? TransactionType.expense;
+    _selectedCurrency = _settingsService.defaultCurrency.value;
+    _loadCategories();
 
     // Initialize with existing transaction if editing
     if (widget.transaction != null) {
       final tx = widget.transaction!;
       _type = tx.type;
-      _amountController.text = tx.amount.toStringAsFixed(2);
+      final displayAmount = tx.originalAmount ?? tx.amount;
+      _amountController.text = displayAmount.toStringAsFixed(2);
       _descriptionController.text = tx.description;
       _noteController.text = tx.note ?? '';
       _selectedCategory = tx.category;
       _selectedIcon = tx.icon;
       _selectedWalletId = tx.walletId;
       _selectedDate = tx.date;
+      _selectedCurrency = tx.currencyCode;
     } else {
       // Set default wallet will be handled by StreamBuilder
       _selectedWalletId = '';
@@ -70,6 +67,14 @@ class _TransactionFormState extends State<TransactionForm> {
         _selectedIcon = '💵';
       }
     }
+  }
+
+  Future<void> _loadCategories() async {
+    final custom = await _categoryService.getCustomCategories();
+    if (!mounted) return;
+    setState(() {
+      _categories = [..._categoryService.defaultCategories, ...custom];
+    });
   }
 
   @override
@@ -155,35 +160,84 @@ class _TransactionFormState extends State<TransactionForm> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Amount
-                    TextFormField(
-                      controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Amount',
-                        prefixText: '\$ ',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    // Amount + Currency
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _amountController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: 'Amount',
+                              prefixText:
+                                  '${_currencySymbol(_selectedCurrency)} ',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? AppColors.darkInputBackground
+                                  : AppColors.inputBackground,
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter an amount';
+                              }
+                              final amount = double.tryParse(value);
+                              if (amount == null || amount <= 0) {
+                                return 'Please enter a valid amount';
+                              }
+                              return null;
+                            },
+                          ),
                         ),
-                        filled: true,
-                        fillColor:
-                            Theme.of(context).brightness == Brightness.dark
-                            ? AppColors.darkInputBackground
-                            : AppColors.inputBackground,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter an amount';
-                        }
-                        final amount = double.tryParse(value);
-                        if (amount == null || amount <= 0) {
-                          return 'Please enter a valid amount';
-                        }
-                        return null;
-                      },
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 110,
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedCurrency,
+                            items: _currencyOptions
+                                .map(
+                                  (code) => DropdownMenuItem(
+                                    value: code,
+                                    child: Text(code),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _selectedCurrency = value);
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'Currency',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? AppColors.darkInputBackground
+                                  : AppColors.inputBackground,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                    if (_selectedCurrency == 'LBP')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Rate: 1 USD = ${_settingsService.lbpRate.value.toStringAsFixed(0)} LBP',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
 
                     const SizedBox(height: 16),
 
@@ -218,7 +272,8 @@ class _TransactionFormState extends State<TransactionForm> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? AppColors.darkInputBackground
                                 : AppColors.inputBackground,
                             borderRadius: BorderRadius.circular(12),
@@ -255,7 +310,7 @@ class _TransactionFormState extends State<TransactionForm> {
 
                     // Wallet
                     StreamBuilder<List<Wallet>>(
-                      stream: _firestoreService.getWallets(),
+                      stream: _unifiedService.getWallets(),
                       builder: (context, snapshot) {
                         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
                           if (_selectedWalletId.isEmpty) {
@@ -375,7 +430,8 @@ class _TransactionFormState extends State<TransactionForm> {
           if (type == TransactionType.income) {
             _selectedCategory = 'Income';
             _selectedIcon = '💵';
-          } else if (type == TransactionType.expense && _selectedCategory == 'Income') {
+          } else if (type == TransactionType.expense &&
+              _selectedCategory == 'Income') {
             // Reset to default expense category if switching from income
             _selectedCategory = 'Food & Drink';
             _selectedIcon = '🍔';
@@ -406,7 +462,6 @@ class _TransactionFormState extends State<TransactionForm> {
   }
 
   Widget _buildWalletSelector(List<Wallet> wallets) {
-
     if (wallets.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -436,7 +491,7 @@ class _TransactionFormState extends State<TransactionForm> {
         child: Row(
           children: [
             StreamBuilder<List<Wallet>>(
-              stream: _firestoreService.getWallets(),
+              stream: _unifiedService.getWallets(),
               builder: (context, snapshot) {
                 final wallets = snapshot.data ?? [];
                 final selectedWallet = _getSelectedWallet(wallets);
@@ -449,7 +504,7 @@ class _TransactionFormState extends State<TransactionForm> {
             const SizedBox(width: 12),
             Expanded(
               child: StreamBuilder<List<Wallet>>(
-                stream: _firestoreService.getWallets(),
+                stream: _unifiedService.getWallets(),
                 builder: (context, snapshot) {
                   final wallets = snapshot.data ?? [];
                   final selectedWallet = _getSelectedWallet(wallets);
@@ -533,22 +588,55 @@ class _TransactionFormState extends State<TransactionForm> {
                   child: GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 1.2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: _categories.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 1.2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                    itemCount: _categories.length + 1,
                     itemBuilder: (context, index) {
+                      if (index == _categories.length) {
+                        return InkWell(
+                          onTap: () => _showAddCategoryDialog(),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_circle_outline,
+                                  color: AppColors.primary,
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Add',
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
                       final category = _categories[index];
-                      final isSelected = _selectedCategory == category['name'];
+                      final isSelected = _selectedCategory == category.name;
 
                       return InkWell(
                         onTap: () {
                           setState(() {
-                            _selectedCategory = category['name']!;
-                            _selectedIcon = category['icon']!;
+                            _selectedCategory = category.name;
+                            _selectedIcon = category.icon;
                           });
                           Navigator.pop(context);
                         },
@@ -569,12 +657,12 @@ class _TransactionFormState extends State<TransactionForm> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                category['icon']!,
+                                category.icon,
                                 style: const TextStyle(fontSize: 32),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                category['name']!,
+                                category.name,
                                 style: AppTextStyles.caption.copyWith(
                                   fontWeight: isSelected
                                       ? FontWeight.w600
@@ -593,9 +681,7 @@ class _TransactionFormState extends State<TransactionForm> {
                 ),
               ),
             ),
-            SizedBox(
-              height: MediaQuery.of(context).viewInsets.bottom,
-            ),
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
           ],
         ),
       ),
@@ -607,14 +693,16 @@ class _TransactionFormState extends State<TransactionForm> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => StreamBuilder<List<Wallet>>(
-        stream: _firestoreService.getWallets(),
+        stream: _unifiedService.getWallets(),
         builder: (context, snapshot) {
           final wallets = snapshot.data ?? [];
-          
+
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -685,6 +773,107 @@ class _TransactionFormState extends State<TransactionForm> {
     }
   }
 
+  String _currencySymbol(String code) {
+    switch (code) {
+      case 'LBP':
+        return 'LBP';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      default:
+        return '\$';
+    }
+  }
+
+  double _convertToDefaultCurrency(
+    double amount,
+    String selected,
+    String defaultCurrency,
+  ) {
+    if (selected == defaultCurrency) {
+      return amount;
+    }
+    final lbpRate = _settingsService.lbpRate.value;
+    if (selected == 'LBP' && defaultCurrency == 'USD') {
+      return amount / lbpRate;
+    }
+    if (selected == 'USD' && defaultCurrency == 'LBP') {
+      return amount * lbpRate;
+    }
+    return amount;
+  }
+
+  double? _exchangeRateForSelection(
+    double amount,
+    double convertedAmount,
+    String selected,
+    String defaultCurrency,
+  ) {
+    if (selected == defaultCurrency) {
+      return null;
+    }
+    if (amount == 0) {
+      return null;
+    }
+    return convertedAmount / amount;
+  }
+
+  Future<void> _showAddCategoryDialog() async {
+    final nameController = TextEditingController();
+    final iconController = TextEditingController(text: '⭐');
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Add Category'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Category name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: iconController,
+                decoration: const InputDecoration(labelText: 'Icon / Emoji'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final icon = iconController.text.trim();
+                if (name.isEmpty || icon.isEmpty) {
+                  return;
+                }
+                await _categoryService.addCustomCategory(
+                  CategoryItem(name: name, icon: icon),
+                );
+                await _loadCategories();
+                if (!mounted) return;
+                setState(() {
+                  _selectedCategory = name;
+                  _selectedIcon = icon;
+                });
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedWalletId.isEmpty) {
@@ -695,6 +884,18 @@ class _TransactionFormState extends State<TransactionForm> {
     }
 
     final amount = double.parse(_amountController.text);
+    final defaultCurrency = _settingsService.defaultCurrency.value;
+    final convertedAmount = _convertToDefaultCurrency(
+      amount,
+      _selectedCurrency,
+      defaultCurrency,
+    );
+    final exchangeRate = _exchangeRateForSelection(
+      amount,
+      convertedAmount,
+      _selectedCurrency,
+      defaultCurrency,
+    );
     // Use default category for income if not set
     final category = _type == TransactionType.income
         ? (_selectedCategory.isEmpty ? 'Income' : _selectedCategory)
@@ -702,11 +903,13 @@ class _TransactionFormState extends State<TransactionForm> {
     final icon = _type == TransactionType.income
         ? (_selectedIcon.isEmpty ? '💵' : _selectedIcon)
         : _selectedIcon;
-    
+
     final transaction = Transaction(
-      id: widget.transaction?.id ?? '',
+      id:
+          widget.transaction?.id ??
+          DateTime.now().microsecondsSinceEpoch.toString(),
       type: _type,
-      amount: amount,
+      amount: convertedAmount,
       description: _descriptionController.text.trim(),
       category: category,
       icon: icon,
@@ -715,6 +918,9 @@ class _TransactionFormState extends State<TransactionForm> {
       note: _noteController.text.trim().isEmpty
           ? null
           : _noteController.text.trim(),
+      currencyCode: _selectedCurrency,
+      originalAmount: _selectedCurrency == defaultCurrency ? null : amount,
+      exchangeRate: exchangeRate,
     );
 
     Navigator.of(context).pop(transaction);

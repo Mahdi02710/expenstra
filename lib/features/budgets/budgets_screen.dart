@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../data/services/firestore_service.dart';
+import '../../data/services/unified_data_service.dart';
+import '../../data/services/notification_service.dart';
+import '../../data/services/settings_service.dart';
 import '../../data/models/budget.dart';
 import '../../data/models/transaction.dart';
 import 'widgets/budgets_overview.dart';
@@ -17,7 +19,9 @@ class BudgetsScreen extends StatefulWidget {
 
 class _BudgetsScreenState extends State<BudgetsScreen>
     with AutomaticKeepAliveClientMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final UnifiedDataService _unifiedService = UnifiedDataService();
+  final NotificationService _notificationService = NotificationService();
+  final SettingsService _settingsService = SettingsService();
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -72,10 +76,10 @@ class _BudgetsScreenState extends State<BudgetsScreen>
 
               // Budgets Overview
               StreamBuilder<List<Budget>>(
-                stream: _firestoreService.getBudgets(),
+                stream: _unifiedService.getBudgets(),
                 builder: (context, budgetsSnapshot) {
                   return StreamBuilder<List<Transaction>>(
-                    stream: _firestoreService.getTransactions(),
+                    stream: _unifiedService.getTransactions(),
                     builder: (context, transactionsSnapshot) {
                       if (!budgetsSnapshot.hasData ||
                           !transactionsSnapshot.hasData) {
@@ -106,6 +110,8 @@ class _BudgetsScreenState extends State<BudgetsScreen>
 
                         return budget.copyWith(spent: spent);
                       }).toList();
+
+                      _notifyBudgetWarnings(budgetsWithSpent);
 
                       final totalBudgetAmount = budgetsWithSpent.fold(
                         0.0,
@@ -169,10 +175,10 @@ class _BudgetsScreenState extends State<BudgetsScreen>
 
               // Budget List
               StreamBuilder<List<Budget>>(
-                stream: _firestoreService.getBudgets(),
+                stream: _unifiedService.getBudgets(),
                 builder: (context, budgetsSnapshot) {
                   return StreamBuilder<List<Transaction>>(
-                    stream: _firestoreService.getTransactions(),
+                    stream: _unifiedService.getTransactions(),
                     builder: (context, transactionsSnapshot) {
                       if (budgetsSnapshot.hasError) {
                         return SliverToBoxAdapter(
@@ -382,10 +388,10 @@ class _BudgetsScreenState extends State<BudgetsScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StreamBuilder<List<Budget>>(
-        stream: _firestoreService.getBudgets(),
+        stream: _unifiedService.getBudgets(),
         builder: (context, budgetsSnapshot) {
           return StreamBuilder<List<Transaction>>(
-            stream: _firestoreService.getTransactions(),
+            stream: _unifiedService.getTransactions(),
             builder: (context, transactionsSnapshot) {
               if (!budgetsSnapshot.hasData || !transactionsSnapshot.hasData) {
                 return Container(
@@ -672,7 +678,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
       builder: (context) => BudgetForm(),
     ).then((result) {
       if (result != null && result is Budget) {
-        _firestoreService
+        _unifiedService
             .addBudget(result)
             .then((_) {
               if (mounted) {
@@ -707,7 +713,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
       builder: (context) => BudgetForm(budget: budget),
     ).then((result) {
       if (result != null && result is Budget) {
-        _firestoreService
+        _unifiedService
             .updateBudget(result)
             .then((_) {
               if (mounted) {
@@ -749,7 +755,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
           ),
           TextButton(
             onPressed: () {
-              _firestoreService
+              _unifiedService
                   .deleteBudget(budget.id)
                   .then((_) {
                     if (mounted) {
@@ -796,6 +802,27 @@ class _BudgetsScreenState extends State<BudgetsScreen>
         ],
       ),
     );
+  }
+
+  void _notifyBudgetWarnings(List<Budget> budgets) {
+    if (!_settingsService.notificationsEnabled.value) {
+      return;
+    }
+    for (final budget in budgets) {
+      if (budget.isOverBudget) {
+        _notificationService.showBudgetWarning(
+          budgetId: budget.id,
+          budgetName: budget.name,
+          status: 'You are over budget. Review your spending.',
+        );
+      } else if (budget.isNearLimit) {
+        _notificationService.showBudgetWarning(
+          budgetId: budget.id,
+          budgetName: budget.name,
+          status: 'You are close to your limit.',
+        );
+      }
+    }
   }
 
   void _showBudgetTemplates() {

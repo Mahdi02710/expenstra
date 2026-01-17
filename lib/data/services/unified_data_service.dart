@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'local_database_service.dart';
 import 'sync_service.dart';
 import 'firestore_service.dart';
+import 'settings_service.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
@@ -17,6 +18,7 @@ class UnifiedDataService {
   final LocalDatabaseService _localDb = LocalDatabaseService();
   final SyncService _syncService = SyncService();
   final FirestoreService _firestoreService = FirestoreService();
+  final SettingsService _settingsService = SettingsService();
 
   final _transactionsController =
       StreamController<List<Transaction>>.broadcast();
@@ -31,13 +33,13 @@ class UnifiedDataService {
     if (_isInitialized) return;
 
     try {
-      // Initial sync if user is authenticated
-      if (FirebaseAuth.instance.currentUser != null) {
+      final autoSync = _settingsService.autoSyncEnabled.value;
+      if (autoSync && FirebaseAuth.instance.currentUser != null) {
         await _syncService.syncAll();
+        _startPeriodicSync();
       }
 
-      // Start periodic syncing
-      _startPeriodicSync();
+      await _processMonthlyWalletRollover();
 
       _isInitialized = true;
     } catch (e) {
@@ -51,6 +53,9 @@ class UnifiedDataService {
   void _startPeriodicSync() {
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!_settingsService.autoSyncEnabled.value) {
+        return;
+      }
       if (FirebaseAuth.instance.currentUser != null) {
         _syncService.syncAll();
       }
@@ -62,6 +67,90 @@ class UnifiedDataService {
     _transactionsController.close();
     _walletsController.close();
     _budgetsController.close();
+  }
+
+  Future<void> _processMonthlyWalletRollover() async {
+    final wallets = await _localDb.getWallets();
+    if (wallets.isEmpty) return;
+
+    final now = DateTime.now();
+    for (final wallet in wallets) {
+      if (!wallet.isMonthlyRollover) {
+        continue;
+      }
+      final last = wallet.lastRolloverAt;
+      if (last != null && last.year == now.year && last.month == now.month) {
+        continue;
+      }
+
+      final balance = await _localDb.calculateWalletBalance(wallet.id);
+      Wallet? targetWallet;
+      if (wallet.rolloverToWalletId != null) {
+        for (final w in wallets) {
+          if (w.id == wallet.rolloverToWalletId) {
+            targetWallet = w;
+            break;
+          }
+        }
+      }
+
+      if (targetWallet == null) {
+        for (final w in wallets) {
+          if (w.type == WalletType.savings) {
+            targetWallet = w;
+            break;
+          }
+        }
+      }
+
+      if (targetWallet == null) {
+        final newSavings = Wallet(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: 'Savings',
+          balance: 0,
+          type: WalletType.savings,
+          icon: '💰',
+          color: 'green',
+          accountNumber: 'SAVINGS',
+          createdAt: now,
+        );
+        await addWallet(newSavings);
+        targetWallet = newSavings;
+      }
+
+      if (balance > 0) {
+        final expenseTx = Transaction(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          type: TransactionType.expense,
+          amount: balance,
+          description: 'Monthly rollover to ${targetWallet.name}',
+          category: 'Rollover',
+          icon: '🔁',
+          date: now,
+          walletId: wallet.id,
+          currencyCode: _settingsService.defaultCurrency.value,
+        );
+        final incomeTx = Transaction(
+          id: (DateTime.now().microsecondsSinceEpoch + 1).toString(),
+          type: TransactionType.income,
+          amount: balance,
+          description: 'Monthly rollover from ${wallet.name}',
+          category: 'Rollover',
+          icon: '🔁',
+          date: now,
+          walletId: targetWallet.id,
+          currencyCode: _settingsService.defaultCurrency.value,
+        );
+        await addTransaction(expenseTx);
+        await addTransaction(incomeTx);
+      }
+
+      final updatedWallet = wallet.copyWith(
+        rolloverToWalletId: targetWallet.id,
+        lastRolloverAt: now,
+      );
+      await updateWallet(updatedWallet);
+    }
   }
 
   // ==========================================

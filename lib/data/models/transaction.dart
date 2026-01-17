@@ -14,6 +14,9 @@ class Transaction {
   final String walletId;
   final String? note;
   final List<String>? tags;
+  final String currencyCode;
+  final double? originalAmount;
+  final double? exchangeRate;
 
   Transaction({
     required this.id,
@@ -26,18 +29,21 @@ class Transaction {
     required this.walletId,
     this.note,
     this.tags,
+    this.currencyCode = 'USD',
+    this.originalAmount,
+    this.exchangeRate,
   });
 
-  // ==========================================
-  // 1. UI HELPERS (Restored & Fixed)
-  // ==========================================
+  // UI HELPERS (Restored & Fixed)
 
   bool get isIncome => type == TransactionType.income;
   bool get isExpense => type == TransactionType.expense;
 
   String get formattedAmount {
-    final formatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-    return formatter.format(amount);
+    final displayAmount = originalAmount ?? amount;
+    final symbol = _currencySymbol(currencyCode);
+    final formatter = NumberFormat.currency(symbol: symbol, decimalDigits: 2);
+    return formatter.format(displayAmount);
   }
 
   String get formattedAmountWithSign {
@@ -93,9 +99,7 @@ class Transaction {
     }
   }
 
-  // ==========================================
   // 2. DATABASE HELPERS (For Firestore)
-  // ==========================================
 
   // Convert Object -> Map (For writing to Firebase)
   Map<String, dynamic> toMap() {
@@ -110,6 +114,9 @@ class Transaction {
       'walletId': walletId,
       'note': note,
       'tags': tags,
+      'currencyCode': currencyCode,
+      'originalAmount': originalAmount,
+      'exchangeRate': exchangeRate,
     };
   }
 
@@ -126,6 +133,9 @@ class Transaction {
       'walletId': walletId,
       'note': note,
       'tags': tags,
+      'currencyCode': currencyCode,
+      'originalAmount': originalAmount,
+      'exchangeRate': exchangeRate,
     };
   }
 
@@ -148,7 +158,28 @@ class Transaction {
       walletId: map['walletId'] ?? '',
       note: map['note'],
       tags: map['tags'] is List ? List<String>.from(map['tags']) : [],
+      currencyCode: map['currencyCode'] ?? 'USD',
+      originalAmount: map['originalAmount'] != null
+          ? (map['originalAmount'] as num).toDouble()
+          : null,
+      exchangeRate: map['exchangeRate'] != null
+          ? (map['exchangeRate'] as num).toDouble()
+          : null,
     );
+  }
+
+  String _currencySymbol(String code) {
+    switch (code) {
+      case 'LBP':
+        return 'LBP ';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      case 'USD':
+      default:
+        return '\$';
+    }
   }
 
   // Optional: CopyWith (Useful for editing transactions later)
