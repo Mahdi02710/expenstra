@@ -63,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo - simple container with emoji
+                // Logo
                 Container(
                   width: 120,
                   height: 120,
@@ -89,8 +89,15 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Text('💰', style: TextStyle(fontSize: 64)),
+                  child: Center(
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/ExpensTra-Logo.png',
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
 

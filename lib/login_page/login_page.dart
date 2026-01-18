@@ -294,7 +294,7 @@ class _LoginPageState extends State<LoginPage>
           offset: Offset(0, _floatingAnimation.value * 0.5),
           child: Column(
             children: [
-              // App icon with gradient
+              // App logo with gradient
               Container(
                 width: 100,
                 height: 100,
@@ -312,10 +312,14 @@ class _LoginPageState extends State<LoginPage>
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    '💰',
-                    style: TextStyle(fontSize: 50),
+                child: Center(
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/ExpensTra-Logo.png',
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
