@@ -26,6 +26,15 @@ class UnifiedDataService {
   final _budgetsController = StreamController<List<Budget>>.broadcast();
 
   Timer? _syncTimer;
+  Timer? _transactionsTimer;
+  Timer? _walletsTimer;
+  Timer? _budgetsTimer;
+  bool _isRefreshingTransactions = false;
+  bool _isRefreshingWallets = false;
+  bool _isRefreshingBudgets = false;
+  List<Transaction>? _lastTransactions;
+  List<Wallet>? _lastWallets;
+  List<Budget>? _lastBudgets;
   bool _isInitialized = false;
 
   /// Initialize the service - loads local data and starts syncing
@@ -64,6 +73,9 @@ class UnifiedDataService {
 
   void dispose() {
     _syncTimer?.cancel();
+    _transactionsTimer?.cancel();
+    _walletsTimer?.cancel();
+    _budgetsTimer?.cancel();
     _transactionsController.close();
     _walletsController.close();
     _budgetsController.close();
@@ -153,45 +165,78 @@ class UnifiedDataService {
     }
   }
 
+  Future<void> _refreshTransactions() async {
+    if (_transactionsController.isClosed || _isRefreshingTransactions) {
+      return;
+    }
+    _isRefreshingTransactions = true;
+    try {
+      final transactions = await _localDb.getTransactions();
+      _lastTransactions = transactions;
+      if (!_transactionsController.isClosed) {
+        _transactionsController.add(transactions);
+      }
+    } catch (error) {
+      if (!_transactionsController.isClosed) {
+        _transactionsController.addError(error);
+      }
+    } finally {
+      _isRefreshingTransactions = false;
+    }
+  }
+
+  Future<void> _refreshWallets() async {
+    if (_walletsController.isClosed || _isRefreshingWallets) {
+      return;
+    }
+    _isRefreshingWallets = true;
+    try {
+      final wallets = await _localDb.getWallets();
+      _lastWallets = wallets;
+      if (!_walletsController.isClosed) {
+        _walletsController.add(wallets);
+      }
+    } catch (error) {
+      if (!_walletsController.isClosed) {
+        _walletsController.addError(error);
+      }
+    } finally {
+      _isRefreshingWallets = false;
+    }
+  }
+
+  Future<void> _refreshBudgets() async {
+    if (_budgetsController.isClosed || _isRefreshingBudgets) {
+      return;
+    }
+    _isRefreshingBudgets = true;
+    try {
+      final budgets = await _localDb.getBudgets();
+      _lastBudgets = budgets;
+      if (!_budgetsController.isClosed) {
+        _budgetsController.add(budgets);
+      }
+    } catch (error) {
+      if (!_budgetsController.isClosed) {
+        _budgetsController.addError(error);
+      }
+    } finally {
+      _isRefreshingBudgets = false;
+    }
+  }
+
   // ==========================================
   // TRANSACTIONS
   // ==========================================
 
   /// Get transactions stream - reads from local DB, syncs in background
   Stream<List<Transaction>> getTransactions() {
-    if (!_transactionsController.isClosed) {
-      _transactionsController.add([]);
+    if (_lastTransactions != null && !_transactionsController.isClosed) {
+      _transactionsController.add(_lastTransactions!);
     }
-    // Emit initial data from local DB
-    _localDb.getTransactions().then((transactions) {
-      if (!_transactionsController.isClosed) {
-        _transactionsController.add(transactions);
-      }
-    }).catchError((error) {
-      if (!_transactionsController.isClosed) {
-        _transactionsController.addError(error);
-      }
-    });
-
-    // Periodically update from local DB
-    Timer.periodic(const Duration(seconds: 2), (timer) async {
-      if (_transactionsController.isClosed) {
-        timer.cancel();
-        return;
-      }
-      try {
-        final transactions = await _localDb.getTransactions();
-        if (!_transactionsController.isClosed) {
-          _transactionsController.add(transactions);
-        } else {
-          timer.cancel();
-        }
-      } catch (error) {
-        if (!_transactionsController.isClosed) {
-          _transactionsController.addError(error);
-        }
-      }
-    });
+    _refreshTransactions();
+    _transactionsTimer ??=
+        Timer.periodic(const Duration(seconds: 8), (_) => _refreshTransactions());
 
     return _transactionsController.stream;
   }
@@ -199,9 +244,7 @@ class UnifiedDataService {
   /// Add transaction - saves to local DB immediately, syncs to Firebase in background
   Future<void> addTransaction(Transaction transaction) async {
     await _syncService.syncTransaction(transaction);
-    // Trigger stream update
-    final transactions = await _localDb.getTransactions();
-    _transactionsController.add(transactions);
+    await _refreshTransactions();
   }
 
   /// Update transaction
@@ -210,15 +253,13 @@ class UnifiedDataService {
     if (FirebaseAuth.instance.currentUser != null) {
       await _syncService.syncTransaction(transaction);
     }
-    final transactions = await _localDb.getTransactions();
-    _transactionsController.add(transactions);
+    await _refreshTransactions();
   }
 
   /// Delete transaction
   Future<void> deleteTransaction(String id) async {
     await _syncService.deleteTransaction(id);
-    final transactions = await _localDb.getTransactions();
-    _transactionsController.add(transactions);
+    await _refreshTransactions();
   }
 
   // ==========================================
@@ -227,31 +268,12 @@ class UnifiedDataService {
 
   /// Get wallets stream
   Stream<List<Wallet>> getWallets() {
-    if (!_walletsController.isClosed) {
-      _walletsController.add([]);
+    if (_lastWallets != null && !_walletsController.isClosed) {
+      _walletsController.add(_lastWallets!);
     }
-    _localDb.getWallets().then((wallets) {
-      _walletsController.add(wallets);
-    }).catchError((error) {
-      if (!_walletsController.isClosed) {
-        _walletsController.addError(error);
-      }
-    });
-
-    Timer.periodic(const Duration(seconds: 2), (timer) async {
-      try {
-        final wallets = await _localDb.getWallets();
-        if (!_walletsController.isClosed) {
-          _walletsController.add(wallets);
-        } else {
-          timer.cancel();
-        }
-      } catch (error) {
-        if (!_walletsController.isClosed) {
-          _walletsController.addError(error);
-        }
-      }
-    });
+    _refreshWallets();
+    _walletsTimer ??=
+        Timer.periodic(const Duration(seconds: 8), (_) => _refreshWallets());
 
     return _walletsController.stream;
   }
@@ -259,8 +281,7 @@ class UnifiedDataService {
   /// Add wallet
   Future<void> addWallet(Wallet wallet) async {
     await _syncService.syncWallet(wallet);
-    final wallets = await _localDb.getWallets();
-    _walletsController.add(wallets);
+    await _refreshWallets();
   }
 
   /// Update wallet
@@ -269,15 +290,13 @@ class UnifiedDataService {
     if (FirebaseAuth.instance.currentUser != null) {
       await _syncService.syncWallet(wallet);
     }
-    final wallets = await _localDb.getWallets();
-    _walletsController.add(wallets);
+    await _refreshWallets();
   }
 
   /// Delete wallet
   Future<void> deleteWallet(String id) async {
     await _syncService.deleteWallet(id);
-    final wallets = await _localDb.getWallets();
-    _walletsController.add(wallets);
+    await _refreshWallets();
   }
 
   // ==========================================
@@ -286,31 +305,12 @@ class UnifiedDataService {
 
   /// Get budgets stream
   Stream<List<Budget>> getBudgets() {
-    if (!_budgetsController.isClosed) {
-      _budgetsController.add([]);
+    if (_lastBudgets != null && !_budgetsController.isClosed) {
+      _budgetsController.add(_lastBudgets!);
     }
-    _localDb.getBudgets().then((budgets) {
-      _budgetsController.add(budgets);
-    }).catchError((error) {
-      if (!_budgetsController.isClosed) {
-        _budgetsController.addError(error);
-      }
-    });
-
-    Timer.periodic(const Duration(seconds: 2), (timer) async {
-      try {
-        final budgets = await _localDb.getBudgets();
-        if (!_budgetsController.isClosed) {
-          _budgetsController.add(budgets);
-        } else {
-          timer.cancel();
-        }
-      } catch (error) {
-        if (!_budgetsController.isClosed) {
-          _budgetsController.addError(error);
-        }
-      }
-    });
+    _refreshBudgets();
+    _budgetsTimer ??=
+        Timer.periodic(const Duration(seconds: 8), (_) => _refreshBudgets());
 
     return _budgetsController.stream;
   }
@@ -318,8 +318,7 @@ class UnifiedDataService {
   /// Add budget
   Future<void> addBudget(Budget budget) async {
     await _syncService.syncBudget(budget);
-    final budgets = await _localDb.getBudgets();
-    _budgetsController.add(budgets);
+    await _refreshBudgets();
   }
 
   /// Update budget
@@ -328,15 +327,13 @@ class UnifiedDataService {
     if (FirebaseAuth.instance.currentUser != null) {
       await _syncService.syncBudget(budget);
     }
-    final budgets = await _localDb.getBudgets();
-    _budgetsController.add(budgets);
+    await _refreshBudgets();
   }
 
   /// Delete budget
   Future<void> deleteBudget(String id) async {
     await _syncService.deleteBudget(id);
-    final budgets = await _localDb.getBudgets();
-    _budgetsController.add(budgets);
+    await _refreshBudgets();
   }
 
   // ==========================================
@@ -370,6 +367,9 @@ class UnifiedDataService {
     final transactions = await _localDb.getTransactions();
     final wallets = await _localDb.getWallets();
     final budgets = await _localDb.getBudgets();
+    _lastTransactions = transactions;
+    _lastWallets = wallets;
+    _lastBudgets = budgets;
     _transactionsController.add(transactions);
     _walletsController.add(wallets);
     _budgetsController.add(budgets);
@@ -378,6 +378,9 @@ class UnifiedDataService {
   /// Clear all local data (useful for logout)
   Future<void> clearLocalData() async {
     await _localDb.clearAllData();
+    _lastTransactions = const [];
+    _lastWallets = const [];
+    _lastBudgets = const [];
     _transactionsController.add([]);
     _walletsController.add([]);
     _budgetsController.add([]);

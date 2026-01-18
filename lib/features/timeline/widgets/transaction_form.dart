@@ -163,7 +163,8 @@ class _TransactionFormState extends State<TransactionForm> {
                     // Amount + Currency
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
+                          flex: 3,
                           child: TextFormField(
                             controller: _amountController,
                             keyboardType: const TextInputType.numberWithOptions(
@@ -196,10 +197,11 @@ class _TransactionFormState extends State<TransactionForm> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        SizedBox(
-                          width: 110,
+                        Flexible(
+                          flex: 2,
                           child: DropdownButtonFormField<String>(
                             value: _selectedCurrency,
+                            isExpanded: true,
                             items: _currencyOptions
                                 .map(
                                   (code) => DropdownMenuItem(
@@ -214,6 +216,11 @@ class _TransactionFormState extends State<TransactionForm> {
                             },
                             decoration: InputDecoration(
                               labelText: 'Currency',
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),

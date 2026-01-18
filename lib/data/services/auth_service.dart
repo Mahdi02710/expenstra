@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -53,6 +54,10 @@ class AuthService {
         throw 'Google sign-in canceled';
       }
       final googleAuth = await googleUser.authentication;
+      if (googleAuth.idToken == null) {
+        throw 'Google sign-in failed: missing ID token. '
+            'Check your Firebase SHA-1 and google-services.json OAuth setup.';
+      }
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -60,8 +65,14 @@ class AuthService {
       await _auth.signInWithCredential(credential);
     } on FirebaseAuthException catch (e) {
       throw _handleAuthError(e);
+    } on PlatformException catch (e) {
+      if (e.code == 'sign_in_failed' || e.code == '10') {
+        throw 'Google sign-in failed. Add your SHA-1/SHA-256 in Firebase '
+            'and re-download google-services.json.';
+      }
+      throw 'Google sign-in error: ${e.message ?? e.code}';
     } catch (e) {
-      throw 'An unexpected error occurred';
+      throw e.toString();
     }
   }
 

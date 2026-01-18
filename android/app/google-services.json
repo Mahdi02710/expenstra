@@ -12,7 +12,20 @@
           "package_name": "com.example.expensetra"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "959459418560-9ib8484tv2381iqk6vhehd3a18f0192a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.expensetra",
+            "certificate_hash": "423b8a850c0b3d0231bd440e16db01276ef796ab"
+          }
+        },
+        {
+          "client_id": "959459418560-dqpi1uhuots8khdlqldq867s3ck3tltv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD3GNURY1xxzfXvb0qHFB1JuQ2DsmZsuA4"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "959459418560-dqpi1uhuots8khdlqldq867s3ck3tltv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "959459418560-m441ov91qiacrl78r82q6mkf2jc7br7t.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.expensetra"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +56,20 @@
           "package_name": "com.expenstra"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "959459418560-tljjq6rqpop1jo05jf6c3a43rdtjcikh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.expenstra",
+            "certificate_hash": "423b8a850c0b3d0231bd440e16db01276ef796ab"
+          }
+        },
+        {
+          "client_id": "959459418560-dqpi1uhuots8khdlqldq867s3ck3tltv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD3GNURY1xxzfXvb0qHFB1JuQ2DsmZsuA4"
@@ -39,7 +77,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "959459418560-dqpi1uhuots8khdlqldq867s3ck3tltv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "959459418560-m441ov91qiacrl78r82q6mkf2jc7br7t.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.expensetra"
+              }
+            }
+          ]
         }
       }
     }
