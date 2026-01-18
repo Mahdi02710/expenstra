@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import '../../app.dart';
 import '../../core/theme/app_colors.dart';
+import '../../data/services/notification_service.dart';
+import '../../data/services/session_service.dart';
+import '../../data/services/settings_service.dart';
+import '../../data/services/unified_data_service.dart';
+import '../../firebase_options.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,6 +17,8 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   bool _isInitialized = false;
+  bool _hasError = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -20,20 +27,46 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    // Wait for Firebase to be initialized (it's being initialized in main.dart)
-    while (Firebase.apps.isEmpty) {
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
+    setState(() {
+      _hasError = false;
+      _errorMessage = null;
+    });
 
-    // Give a minimum display time for splash screen (better UX)
-    await Future.delayed(const Duration(milliseconds: 1500));
+    try {
+      await SettingsService().initialize();
+      await SessionService().initialize();
 
-    // Navigate to main app
-    if (mounted && !_isInitialized) {
-      _isInitialized = true;
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const ExpensTra()));
+      final notificationService = NotificationService();
+      await notificationService.initialize();
+      if (SettingsService().notificationsEnabled.value &&
+          SettingsService().dailyReminderEnabled.value) {
+        await notificationService.scheduleDailyReminder(enabled: true);
+      }
+
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+
+      final unifiedService = UnifiedDataService();
+      await unifiedService.initialize();
+
+      // Give a minimum display time for splash screen (better UX)
+      await Future.delayed(const Duration(milliseconds: 1200));
+
+      if (mounted && !_isInitialized) {
+        _isInitialized = true;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const ExpensTra()),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _hasError = true;
+        _errorMessage = e.toString();
+      });
     }
   }
 
@@ -130,17 +163,61 @@ class _SplashScreenState extends State<SplashScreen> {
 
                 const SizedBox(height: 64),
 
-                // Simple loading indicator
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isDark ? AppColors.gold : AppColors.primary,
+                if (_hasError) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'Initialization failed. Tap retry.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isDark
+                            ? const Color(0xFF9CA3AF)
+                            : const Color(0xFF6B7280),
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: _initializeApp,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor:
+                          isDark ? AppColors.gold : AppColors.primary,
+                      side: BorderSide(
+                        color: isDark ? AppColors.gold : AppColors.primary,
+                      ),
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: isDark
+                              ? const Color(0xFF9CA3AF)
+                              : const Color(0xFF6B7280),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ] else ...[
+                  // Simple loading indicator
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDark ? AppColors.gold : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

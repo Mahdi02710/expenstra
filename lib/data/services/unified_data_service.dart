@@ -159,10 +159,17 @@ class UnifiedDataService {
 
   /// Get transactions stream - reads from local DB, syncs in background
   Stream<List<Transaction>> getTransactions() {
+    if (!_transactionsController.isClosed) {
+      _transactionsController.add([]);
+    }
     // Emit initial data from local DB
     _localDb.getTransactions().then((transactions) {
       if (!_transactionsController.isClosed) {
         _transactionsController.add(transactions);
+      }
+    }).catchError((error) {
+      if (!_transactionsController.isClosed) {
+        _transactionsController.addError(error);
       }
     });
 
@@ -172,11 +179,17 @@ class UnifiedDataService {
         timer.cancel();
         return;
       }
-      final transactions = await _localDb.getTransactions();
-      if (!_transactionsController.isClosed) {
-        _transactionsController.add(transactions);
-      } else {
-        timer.cancel();
+      try {
+        final transactions = await _localDb.getTransactions();
+        if (!_transactionsController.isClosed) {
+          _transactionsController.add(transactions);
+        } else {
+          timer.cancel();
+        }
+      } catch (error) {
+        if (!_transactionsController.isClosed) {
+          _transactionsController.addError(error);
+        }
       }
     });
 
@@ -214,16 +227,29 @@ class UnifiedDataService {
 
   /// Get wallets stream
   Stream<List<Wallet>> getWallets() {
+    if (!_walletsController.isClosed) {
+      _walletsController.add([]);
+    }
     _localDb.getWallets().then((wallets) {
       _walletsController.add(wallets);
+    }).catchError((error) {
+      if (!_walletsController.isClosed) {
+        _walletsController.addError(error);
+      }
     });
 
     Timer.periodic(const Duration(seconds: 2), (timer) async {
-      final wallets = await _localDb.getWallets();
-      if (!_walletsController.isClosed) {
-        _walletsController.add(wallets);
-      } else {
-        timer.cancel();
+      try {
+        final wallets = await _localDb.getWallets();
+        if (!_walletsController.isClosed) {
+          _walletsController.add(wallets);
+        } else {
+          timer.cancel();
+        }
+      } catch (error) {
+        if (!_walletsController.isClosed) {
+          _walletsController.addError(error);
+        }
       }
     });
 
@@ -260,16 +286,29 @@ class UnifiedDataService {
 
   /// Get budgets stream
   Stream<List<Budget>> getBudgets() {
+    if (!_budgetsController.isClosed) {
+      _budgetsController.add([]);
+    }
     _localDb.getBudgets().then((budgets) {
       _budgetsController.add(budgets);
+    }).catchError((error) {
+      if (!_budgetsController.isClosed) {
+        _budgetsController.addError(error);
+      }
     });
 
     Timer.periodic(const Duration(seconds: 2), (timer) async {
-      final budgets = await _localDb.getBudgets();
-      if (!_budgetsController.isClosed) {
-        _budgetsController.add(budgets);
-      } else {
-        timer.cancel();
+      try {
+        final budgets = await _localDb.getBudgets();
+        if (!_budgetsController.isClosed) {
+          _budgetsController.add(budgets);
+        } else {
+          timer.cancel();
+        }
+      } catch (error) {
+        if (!_budgetsController.isClosed) {
+          _budgetsController.addError(error);
+        }
       }
     });
 

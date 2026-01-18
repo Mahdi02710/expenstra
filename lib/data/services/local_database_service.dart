@@ -91,7 +91,7 @@ class LocalDatabaseService {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         spent REAL NOT NULL DEFAULT 0,
-        limit REAL NOT NULL,
+        `limit` REAL NOT NULL,
         icon TEXT NOT NULL,
         color TEXT NOT NULL,
         period TEXT NOT NULL,
