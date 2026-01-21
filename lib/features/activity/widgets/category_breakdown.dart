@@ -94,6 +94,11 @@ class CategoryBreakdown extends StatelessWidget {
     required Color color,
   }) {
     final formatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final progressColor = percentage >= 0.9
+        ? AppColors.error
+        : percentage >= 0.75
+            ? AppColors.warning
+            : AppColors.income;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -155,7 +160,7 @@ class CategoryBreakdown extends StatelessWidget {
           Container(
             height: 6,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: progressColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(3),
             ),
             child: FractionallySizedBox(
@@ -163,7 +168,7 @@ class CategoryBreakdown extends StatelessWidget {
               widthFactor: percentage,
               child: Container(
                 decoration: BoxDecoration(
-                  color: color,
+                  color: progressColor,
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),

@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
@@ -174,6 +176,33 @@ class _TransactionFormState extends State<TransactionForm> {
                               labelText: 'Amount',
                               prefixText:
                                   '${_currencySymbol(_selectedCurrency)} ',
+                              prefixStyle: AppTextStyles.body2.copyWith(
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
+                              ),
+                              labelStyle: AppTextStyles.body2.copyWith(
+                                height: 1.2,
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
+                              ),
+                              floatingLabelStyle: AppTextStyles.body2.copyWith(
+                                height: 1.2,
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 18,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -200,13 +229,16 @@ class _TransactionFormState extends State<TransactionForm> {
                         Flexible(
                           flex: 2,
                           child: DropdownButtonFormField<String>(
-                            value: _selectedCurrency,
+                            initialValue: _selectedCurrency,
                             isExpanded: true,
                             items: _currencyOptions
                                 .map(
                                   (code) => DropdownMenuItem(
                                     value: code,
-                                    child: Text(code),
+                                    child: Text(
+                                      code,
+                                      style: AppTextStyles.body2,
+                                    ),
                                   ),
                                 )
                                 .toList(),
@@ -214,12 +246,35 @@ class _TransactionFormState extends State<TransactionForm> {
                               if (value == null) return;
                               setState(() => _selectedCurrency = value);
                             },
+                            style: AppTextStyles.body2.copyWith(
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.textPrimary,
+                            ),
                             decoration: InputDecoration(
                               labelText: 'Currency',
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
-                                vertical: 14,
+                                vertical: 18,
+                              ),
+                              labelStyle: AppTextStyles.body2.copyWith(
+                                height: 1.2,
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
+                              ),
+                              floatingLabelStyle: AppTextStyles.body2.copyWith(
+                                height: 1.2,
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),

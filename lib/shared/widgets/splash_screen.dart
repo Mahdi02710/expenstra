@@ -1,5 +1,9 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import '../../app.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/services/notification_service.dart';
@@ -48,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
           options: DefaultFirebaseOptions.currentPlatform,
         );
       }
-
+      await _initializeAppCheck();
       final unifiedService = UnifiedDataService();
       await unifiedService.initialize();
 
@@ -57,9 +61,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
       if (mounted && !_isInitialized) {
         _isInitialized = true;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ExpensTra()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const ExpensTra()));
       }
     } catch (e) {
       if (!mounted) return;
@@ -67,6 +71,22 @@ class _SplashScreenState extends State<SplashScreen> {
         _hasError = true;
         _errorMessage = e.toString();
       });
+    }
+  }
+
+  Future<void> _initializeAppCheck() async {
+    if (kIsWeb) return;
+    try {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kDebugMode
+            ? AndroidProvider.debug
+            : AndroidProvider.playIntegrity,
+        appleProvider: kDebugMode
+            ? AppleProvider.debug
+            : AppleProvider.deviceCheck,
+      );
+    } catch (_) {
+      // Keep startup resilient if App Check is unavailable in debug.
     }
   }
 
@@ -96,42 +116,12 @@ class _SplashScreenState extends State<SplashScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
-                Container(
+                // Logo (no background)
+                Image.asset(
+                  'assets/images/ExpensTra-Logo.png',
                   width: 120,
                   height: 120,
-                  decoration: BoxDecoration(
-                    gradient: isDark
-                        ? const LinearGradient(
-                            colors: [Color(0xFFD2AB17), Color(0xFFEDC047)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : const LinearGradient(
-                            colors: [Color(0xFF163473), Color(0xFF162647)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isDark ? AppColors.gold : AppColors.primary)
-                            .withValues(alpha: 0.3),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/ExpensTra-Logo.png',
-                        width: 90,
-                        height: 90,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
+                  fit: BoxFit.contain,
                 ),
 
                 const SizedBox(height: 32),
@@ -181,8 +171,9 @@ class _SplashScreenState extends State<SplashScreen> {
                   OutlinedButton(
                     onPressed: _initializeApp,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor:
-                          isDark ? AppColors.gold : AppColors.primary,
+                      foregroundColor: isDark
+                          ? AppColors.gold
+                          : AppColors.primary,
                       side: BorderSide(
                         color: isDark ? AppColors.gold : AppColors.primary,
                       ),

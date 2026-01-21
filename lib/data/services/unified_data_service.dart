@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'local_database_service.dart';
@@ -7,6 +9,7 @@ import 'settings_service.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
+import '../models/recurring_payment.dart';
 
 /// Unified service that handles both local SQLite and Firebase storage
 /// Reads from local DB first (fast, works offline), syncs with Firebase in background
@@ -29,6 +32,8 @@ class UnifiedDataService {
   Timer? _transactionsTimer;
   Timer? _walletsTimer;
   Timer? _budgetsTimer;
+  Timer? _recurringTimer;
+  StreamSubscription<User?>? _authSub;
   bool _isRefreshingTransactions = false;
   bool _isRefreshingWallets = false;
   bool _isRefreshingBudgets = false;
@@ -43,12 +48,33 @@ class UnifiedDataService {
 
     try {
       final autoSync = _settingsService.autoSyncEnabled.value;
-      if (autoSync && FirebaseAuth.instance.currentUser != null) {
+      if (FirebaseAuth.instance.currentUser != null) {
         await _syncService.syncAll();
-        _startPeriodicSync();
+        await _refreshTransactions();
+        await _refreshWallets();
+        await _refreshBudgets();
+        if (autoSync) {
+          _startPeriodicSync();
+        }
       }
 
+      _authSub ??= FirebaseAuth.instance.authStateChanges().listen((user) async {
+        if (user == null) {
+          _syncTimer?.cancel();
+          return;
+        }
+        await _syncService.syncAll();
+        await _refreshTransactions();
+        await _refreshWallets();
+        await _refreshBudgets();
+        if (_settingsService.autoSyncEnabled.value) {
+          _startPeriodicSync();
+        }
+      });
+
       await _processMonthlyWalletRollover();
+      await _processRecurringPayments();
+      _startRecurringProcessing();
 
       _isInitialized = true;
     } catch (e) {
@@ -71,11 +97,19 @@ class UnifiedDataService {
     });
   }
 
+  void _startRecurringProcessing() {
+    _recurringTimer?.cancel();
+    _recurringTimer =
+        Timer.periodic(const Duration(hours: 1), (_) => _processRecurringPayments());
+  }
+
   void dispose() {
     _syncTimer?.cancel();
     _transactionsTimer?.cancel();
     _walletsTimer?.cancel();
     _budgetsTimer?.cancel();
+    _recurringTimer?.cancel();
+    _authSub?.cancel();
     _transactionsController.close();
     _walletsController.close();
     _budgetsController.close();
@@ -162,6 +196,50 @@ class UnifiedDataService {
         lastRolloverAt: now,
       );
       await updateWallet(updatedWallet);
+    }
+  }
+
+  Future<void> _processRecurringPayments() async {
+    final payments = await _localDb.getRecurringPayments();
+    if (payments.isEmpty) return;
+
+    final now = DateTime.now();
+    for (final payment in payments) {
+      if (!payment.isActive) {
+        continue;
+      }
+
+      var nextRun = payment.nextRunAt;
+      if (nextRun.isAfter(now)) {
+        continue;
+      }
+
+      DateTime? lastRun;
+      var guard = 0;
+      while (!nextRun.isAfter(now) && guard < 36) {
+        final tx = Transaction(
+          id: (DateTime.now().microsecondsSinceEpoch + guard).toString(),
+          type: TransactionType.expense,
+          amount: payment.amount,
+          description: payment.name,
+          category: payment.category,
+          icon: payment.icon,
+          date: nextRun,
+          walletId: payment.walletId,
+          note: payment.note,
+          currencyCode: _settingsService.defaultCurrency.value,
+        );
+        await addTransaction(tx);
+        lastRun = nextRun;
+        nextRun = payment.nextDate(nextRun);
+        guard += 1;
+      }
+
+      final updated = payment.copyWith(
+        lastRunAt: lastRun ?? payment.lastRunAt,
+        nextRunAt: nextRun,
+      );
+      await _localDb.updateRecurringPayment(updated);
     }
   }
 
@@ -384,5 +462,26 @@ class UnifiedDataService {
     _transactionsController.add([]);
     _walletsController.add([]);
     _budgetsController.add([]);
+  }
+
+  // ==========================================
+  // RECURRING PAYMENTS
+  // ==========================================
+
+  Future<void> addRecurringPayment(RecurringPayment payment) async {
+    await _localDb.insertRecurringPayment(payment);
+    await _processRecurringPayments();
+  }
+
+  Future<void> updateRecurringPayment(RecurringPayment payment) async {
+    await _localDb.updateRecurringPayment(payment);
+  }
+
+  Future<void> deleteRecurringPayment(String id) async {
+    await _localDb.deleteRecurringPayment(id);
+  }
+
+  Future<List<RecurringPayment>> getRecurringPayments() async {
+    return _localDb.getRecurringPayments();
   }
 }

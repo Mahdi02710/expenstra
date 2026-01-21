@@ -12,7 +12,23 @@ class AuthService {
 
   Future<void> signIn({required String email, required String password}) async {
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final user = credential.user;
+      if (user == null) {
+        throw 'Sign in failed. Please try again.';
+      }
+      final usesPasswordProvider = user.providerData.any(
+        (info) => info.providerId == 'password',
+      );
+      if (usesPasswordProvider && !user.emailVerified) {
+        await user.sendEmailVerification();
+        await _auth.signOut();
+        throw 'Please verify your email before signing in. '
+            'We sent a verification link.';
+      }
     } on FirebaseAuthException catch (e) {
       throw _handleAuthError(e);
     } catch (e) {
@@ -22,10 +38,15 @@ class AuthService {
 
   Future<void> signUp({required String email, required String password}) async {
     try {
-      await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+      final user = credential.user;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+      await _auth.signOut();
     } on FirebaseAuthException catch (e) {
       throw _handleAuthError(e);
     } catch (e) {
@@ -35,6 +56,7 @@ class AuthService {
 
   Future<void> signOut() async {
     await _auth.signOut();
+    await _googleSignIn.signOut();
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
@@ -49,6 +71,7 @@ class AuthService {
 
   Future<void> signInWithGoogle() async {
     try {
+      await _googleSignIn.signOut();
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         throw 'Google sign-in canceled';

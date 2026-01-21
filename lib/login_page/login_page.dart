@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:expensetra/core/theme/app_colors.dart';
 import 'package:expensetra/core/theme/app_text_styles.dart';
 import 'package:expensetra/data/services/auth_service.dart';
 import 'package:expensetra/data/services/session_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -30,6 +32,8 @@ class _LoginPageState extends State<LoginPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _floatingAnimation;
+
+  StreamSubscription<User?>? _authSubscription;
 
   final AuthService _authService = AuthService();
   final SessionService _sessionService = SessionService();
@@ -89,10 +93,20 @@ class _LoginPageState extends State<LoginPage>
     // Start animations
     _fadeAnimationController.forward();
     _slideAnimationController.forward();
+
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
+      (user) {
+        if (!mounted || user == null) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _backgroundAnimationController.dispose();
     _fadeAnimationController.dispose();
     _slideAnimationController.dispose();
@@ -116,7 +130,9 @@ class _LoginPageState extends State<LoginPage>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Account created successfully!"),
+              content: Text(
+                "Verification email sent. Please verify to sign in.",
+              ),
               backgroundColor: AppColors.success,
             ),
           );
@@ -126,10 +142,11 @@ class _LoginPageState extends State<LoginPage>
           email: emailController.text.trim(),
           password: passwordController.text.trim(),
         );
+        await _sessionService.setGuestMode(false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Login Successful!"),
+              content: Text("Sign in successful!"),
               backgroundColor: AppColors.success,
             ),
           );
@@ -191,6 +208,7 @@ class _LoginPageState extends State<LoginPage>
     setState(() => isLoading = true);
     try {
       await _authService.signInWithGoogle();
+      await _sessionService.setGuestMode(false);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -294,34 +312,12 @@ class _LoginPageState extends State<LoginPage>
           offset: Offset(0, _floatingAnimation.value * 0.5),
           child: Column(
             children: [
-              // App logo with gradient
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  gradient: isDark
-                      ? AppColors.goldGradient
-                      : AppColors.primaryGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isDark ? AppColors.gold : AppColors.primary)
-                          .withValues(alpha: 0.3),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/ExpensTra-Logo.png',
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+              // App logo (no background)
+              Image.asset(
+                'assets/images/ExpensTra-Logo.png',
+                width: 92,
+                height: 92,
+                fit: BoxFit.contain,
               ),
 
               const SizedBox(height: 24),
@@ -388,7 +384,7 @@ class _LoginPageState extends State<LoginPage>
           children: [
             // Title
             Text(
-              isSignUp ? 'Create Account' : 'Welcome Back',
+              isSignUp ? 'Sign Up' : 'Sign In',
               style: AppTextStyles.h2.copyWith(
                 color: isDark
                     ? AppColors.darkTextPrimary
@@ -402,7 +398,7 @@ class _LoginPageState extends State<LoginPage>
             Text(
               isSignUp
                   ? 'Start tracking your expenses today'
-                  : 'Sign in to continue',
+                  : 'Welcome back, sign in to continue',
               style: AppTextStyles.body2.copyWith(
                 color: isDark
                     ? AppColors.darkTextSecondary
@@ -416,6 +412,7 @@ class _LoginPageState extends State<LoginPage>
             _buildTextField(
               controller: emailController,
               label: 'Email',
+              hintText: 'name@example.com',
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
@@ -525,6 +522,7 @@ class _LoginPageState extends State<LoginPage>
     required String label,
     required IconData icon,
     required bool isDark,
+    String? hintText,
     bool obscureText = false,
     TextInputType? keyboardType,
     Widget? suffixIcon,
@@ -540,6 +538,7 @@ class _LoginPageState extends State<LoginPage>
       ),
       decoration: InputDecoration(
         labelText: label,
+        hintText: hintText,
         prefixIcon: Icon(
           icon,
           color: isDark ? AppColors.gold : AppColors.primary,

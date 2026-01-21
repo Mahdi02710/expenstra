@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
+import '../models/recurring_payment.dart';
 
 class LocalDatabaseService {
   static final LocalDatabaseService _instance =
@@ -13,7 +14,7 @@ class LocalDatabaseService {
 
   static Database? _database;
   static const String _dbName = 'expensetra.db';
-  static const int _dbVersion = 3;
+  static const int _dbVersion = 5;
   Future<void> _operationQueue = Future.value();
 
   // Table names
@@ -21,6 +22,7 @@ class LocalDatabaseService {
   static const String _walletsTable = 'wallets';
   static const String _budgetsTable = 'budgets';
   static const String _syncTable = 'sync_queue';
+  static const String _recurringPaymentsTable = 'recurring_payments';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -140,6 +142,25 @@ class LocalDatabaseService {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE $_recurringPaymentsTable (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        amount REAL NOT NULL,
+        category TEXT NOT NULL,
+        icon TEXT NOT NULL,
+        walletId TEXT NOT NULL,
+        note TEXT,
+        period TEXT NOT NULL,
+        startDate INTEGER NOT NULL,
+        nextRunAt INTEGER NOT NULL,
+        lastRunAt INTEGER,
+        isActive INTEGER DEFAULT 1,
+        createdAt INTEGER NOT NULL,
+        updatedAt INTEGER NOT NULL
+      )
+    ''');
+
     // Create indexes for better query performance
     await db.execute(
       'CREATE INDEX idx_transactions_date ON $_transactionsTable(date DESC)',
@@ -158,6 +179,9 @@ class LocalDatabaseService {
     );
     await db.execute(
       'CREATE INDEX idx_sync_queue ON $_syncTable(tableName, recordId)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_recurring_next_run ON $_recurringPaymentsTable(nextRunAt)',
     );
   }
 
@@ -184,6 +208,52 @@ class LocalDatabaseService {
         );
         await db.execute(
           'ALTER TABLE $_walletsTable ADD COLUMN lastRolloverAt INTEGER',
+        );
+      }
+      if (oldVersion < 4) {
+        await db.execute('''
+          CREATE TABLE $_recurringPaymentsTable (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL,
+            icon TEXT NOT NULL,
+            walletId TEXT NOT NULL,
+            note TEXT,
+            period TEXT NOT NULL,
+            startDate INTEGER NOT NULL,
+            nextRunAt INTEGER NOT NULL,
+            lastRunAt INTEGER,
+            isActive INTEGER DEFAULT 1,
+            createdAt INTEGER NOT NULL,
+            updatedAt INTEGER NOT NULL
+          )
+        ''');
+        await db.execute(
+          'CREATE INDEX idx_recurring_next_run ON $_recurringPaymentsTable(nextRunAt)',
+        );
+      }
+      if (oldVersion < 5) {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS $_recurringPaymentsTable (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL,
+            icon TEXT NOT NULL,
+            walletId TEXT NOT NULL,
+            note TEXT,
+            period TEXT NOT NULL,
+            startDate INTEGER NOT NULL,
+            nextRunAt INTEGER NOT NULL,
+            lastRunAt INTEGER,
+            isActive INTEGER DEFAULT 1,
+            createdAt INTEGER NOT NULL,
+            updatedAt INTEGER NOT NULL
+          )
+        ''');
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_recurring_next_run ON $_recurringPaymentsTable(nextRunAt)',
         );
       }
     }
@@ -684,6 +754,58 @@ class LocalDatabaseService {
   }
 
   // ==========================================
+  // RECURRING PAYMENTS
+  // ==========================================
+
+  Future<void> insertRecurringPayment(RecurringPayment payment) async {
+    await _withDb((db) async {
+      await db.insert(
+        _recurringPaymentsTable,
+        {
+          ...payment.toMapForLocal(),
+          'createdAt': DateTime.now().millisecondsSinceEpoch,
+          'updatedAt': DateTime.now().millisecondsSinceEpoch,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+  }
+
+  Future<void> updateRecurringPayment(RecurringPayment payment) async {
+    await _withDb((db) async {
+      await db.update(
+        _recurringPaymentsTable,
+        {
+          ...payment.toMapForLocal(),
+          'updatedAt': DateTime.now().millisecondsSinceEpoch,
+        },
+        where: 'id = ?',
+        whereArgs: [payment.id],
+      );
+    });
+  }
+
+  Future<void> deleteRecurringPayment(String id) async {
+    await _withDb((db) async {
+      await db.delete(
+        _recurringPaymentsTable,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+  }
+
+  Future<List<RecurringPayment>> getRecurringPayments() async {
+    return _withDb((db) async {
+      final maps = await db.query(
+        _recurringPaymentsTable,
+        orderBy: 'nextRunAt ASC',
+      );
+      return maps.map(RecurringPayment.fromMap).toList();
+    });
+  }
+
+  // ==========================================
   // UTILITY METHODS
   // ==========================================
 
@@ -693,6 +815,7 @@ class LocalDatabaseService {
       await db.delete(_walletsTable);
       await db.delete(_budgetsTable);
       await db.delete(_syncTable);
+      await db.delete(_recurringPaymentsTable);
     });
   }
 

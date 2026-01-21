@@ -1,9 +1,12 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/services/unified_data_service.dart';
 import '../../data/services/settings_service.dart';
+import '../../data/services/category_service.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/wallet.dart';
 import 'widgets/balance_card.dart';
@@ -22,9 +25,12 @@ class _TimelineScreenState extends State<TimelineScreen>
     with AutomaticKeepAliveClientMixin {
   final UnifiedDataService _unifiedService = UnifiedDataService();
   final SettingsService _settingsService = SettingsService();
+  final CategoryService _categoryService = CategoryService();
   final ScrollController _scrollController = ScrollController();
   StreamSubscription<List<Wallet>>? _walletsSub;
+  StreamSubscription<List<Transaction>>? _transactionsSub;
   List<Wallet> _walletsCache = [];
+  List<Transaction> _transactionsCache = [];
 
   // Search and filter state
   String _searchQuery = '';
@@ -41,11 +47,15 @@ class _TimelineScreenState extends State<TimelineScreen>
     _walletsSub = _unifiedService.getWallets().listen((wallets) {
       _walletsCache = wallets;
     });
+    _transactionsSub = _unifiedService.getTransactions().listen((transactions) {
+      _transactionsCache = transactions;
+    });
   }
 
   @override
   void dispose() {
     _walletsSub?.cancel();
+    _transactionsSub?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -201,6 +211,57 @@ class _TimelineScreenState extends State<TimelineScreen>
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+            if (_searchQuery.isNotEmpty ||
+                _filterType != null ||
+                _filterCategory != null ||
+                _filterWalletId != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (_searchQuery.isNotEmpty)
+                        InputChip(
+                          label: Text('Search: $_searchQuery'),
+                          onDeleted: () => setState(() => _searchQuery = ''),
+                        ),
+                      if (_filterType != null)
+                        InputChip(
+                          label: Text(
+                            _filterType == TransactionType.income
+                                ? 'Income'
+                                : 'Expense',
+                          ),
+                          onDeleted: () => setState(() => _filterType = null),
+                        ),
+                      if (_filterCategory != null)
+                        InputChip(
+                          label: Text(_filterCategory!),
+                          onDeleted: () =>
+                              setState(() => _filterCategory = null),
+                        ),
+                      if (_filterWalletId != null)
+                        InputChip(
+                          label: Text(
+                            _findWallet(_filterWalletId!)?.name ??
+                                'Selected Wallet',
+                          ),
+                          onDeleted: () =>
+                              setState(() => _filterWalletId = null),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+            if (_searchQuery.isNotEmpty ||
+                _filterType != null ||
+                _filterCategory != null ||
+                _filterWalletId != null)
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
             SliverToBoxAdapter(
               child: Padding(
@@ -692,9 +753,11 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   void _showSearchBottomSheet() {
+    final controller = TextEditingController(text: _searchQuery);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -718,17 +781,18 @@ class _TimelineScreenState extends State<TimelineScreen>
             Padding(
               padding: const EdgeInsets.all(24),
               child: TextField(
+                controller: controller,
                 autofocus: true,
                 decoration: InputDecoration(
                   labelText: 'Search transactions',
                   hintText: 'Enter description, category, or note',
                   prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchQuery.isNotEmpty
+                  suffixIcon: controller.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
                           onPressed: () {
+                            controller.clear();
                             setState(() => _searchQuery = '');
-                            Navigator.pop(context);
                           },
                         )
                       : null,
@@ -743,19 +807,36 @@ class _TimelineScreenState extends State<TimelineScreen>
                 onChanged: (value) {
                   setState(() => _searchQuery = value);
                 },
+                onSubmitted: (_) {
+                  setState(() => _searchQuery = controller.text.trim());
+                  Navigator.pop(context);
+                },
               ),
             ),
-            if (_searchQuery.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: TextButton(
-                  onPressed: () {
-                    setState(() => _searchQuery = '');
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Clear search'),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      controller.clear();
+                      setState(() => _searchQuery = '');
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Clear'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() => _searchQuery = controller.text.trim());
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Apply'),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -763,189 +844,209 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   void _showFilterBottomSheet() {
+    final categories = <String>{
+      ..._categoryService.defaultCategories.map((c) => c.name),
+      ..._transactionsCache.map((tx) => tx.category),
+    }.toList()..sort();
+    TransactionType? tempType = _filterType;
+    String? tempCategory = _filterCategory;
+    String? tempWalletId = _filterWalletId;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Filter Transactions',
-                    style: AppTextStyles.h3.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
-                    ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Type filter
-                  Text('Type', style: AppTextStyles.subtitle2),
-                  const SizedBox(height: 8),
-                  Row(
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: FilterChip(
-                          label: const Text('All'),
-                          selected: _filterType == null,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _filterType = null);
-                            }
-                          },
+                      Text(
+                        'Filter Transactions',
+                        style: AppTextStyles.h3.copyWith(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilterChip(
-                          label: const Text('Income'),
-                          selected: _filterType == TransactionType.income,
-                          onSelected: (selected) {
-                            setState(() {
-                              _filterType = selected
-                                  ? TransactionType.income
-                                  : null;
-                            });
-                          },
-                        ),
+                      const SizedBox(height: 24),
+
+                      // Type filter
+                      Text('Type', style: AppTextStyles.subtitle2),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilterChip(
+                              label: const Text('All'),
+                              selected: tempType == null,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setSheetState(() => tempType = null);
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilterChip(
+                              label: const Text('Income'),
+                              selected: tempType == TransactionType.income,
+                              onSelected: (selected) {
+                                setSheetState(() {
+                                  tempType = selected
+                                      ? TransactionType.income
+                                      : null;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilterChip(
+                              label: const Text('Expense'),
+                              selected: tempType == TransactionType.expense,
+                              onSelected: (selected) {
+                                setSheetState(() {
+                                  tempType = selected
+                                      ? TransactionType.expense
+                                      : null;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilterChip(
-                          label: const Text('Expense'),
-                          selected: _filterType == TransactionType.expense,
-                          onSelected: (selected) {
-                            setState(() {
-                              _filterType = selected
-                                  ? TransactionType.expense
-                                  : null;
-                            });
-                          },
-                        ),
+
+                      const SizedBox(height: 24),
+
+                      // Category filter
+                      Text('Category', style: AppTextStyles.subtitle2),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilterChip(
+                            label: const Text('All'),
+                            selected: tempCategory == null,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setSheetState(() => tempCategory = null);
+                              }
+                            },
+                          ),
+                          ...categories.map(
+                            (category) => FilterChip(
+                              label: Text(category),
+                              selected: tempCategory == category,
+                              onSelected: (selected) {
+                                setSheetState(() {
+                                  tempCategory = selected ? category : null;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
                       ),
+
+                      const SizedBox(height: 24),
+
+                      // Wallet filter
+                      Text('Wallet', style: AppTextStyles.subtitle2),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilterChip(
+                            label: const Text('All'),
+                            selected: tempWalletId == null,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setSheetState(() => tempWalletId = null);
+                              }
+                            },
+                          ),
+                          ..._walletsCache.map(
+                            (wallet) => FilterChip(
+                              label: Text('${wallet.icon} ${wallet.name}'),
+                              selected: tempWalletId == wallet.id,
+                              onSelected: (selected) {
+                                setSheetState(() {
+                                  tempWalletId = selected ? wallet.id : null;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                setSheetState(() {
+                                  tempType = null;
+                                  tempCategory = null;
+                                  tempWalletId = null;
+                                });
+                              },
+                              child: const Text('Clear'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _filterType = tempType;
+                                  _filterCategory = tempCategory;
+                                  _filterWalletId = tempWalletId;
+                                });
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Apply'),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
                     ],
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Category filter
-                  Text('Category', style: AppTextStyles.subtitle2),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FilterChip(
-                        label: const Text('All'),
-                        selected: _filterCategory == null,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => _filterCategory = null);
-                          }
-                        },
-                      ),
-                      ...[
-                        'Food & Drink',
-                        'Transportation',
-                        'Shopping',
-                        'Housing',
-                        'Entertainment',
-                        'Health & Fitness',
-                        'Income',
-                        'Other',
-                      ].map(
-                        (category) => FilterChip(
-                          label: Text(category),
-                          selected: _filterCategory == category,
-                          onSelected: (selected) {
-                            setState(() {
-                              _filterCategory = selected ? category : null;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Wallet filter
-                  Text('Wallet', style: AppTextStyles.subtitle2),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FilterChip(
-                        label: const Text('All'),
-                        selected: _filterWalletId == null,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => _filterWalletId = null);
-                          }
-                        },
-                      ),
-                      ..._walletsCache.map(
-                        (wallet) => FilterChip(
-                          label: Text('${wallet.icon} ${wallet.name}'),
-                          selected: _filterWalletId == wallet.id,
-                          onSelected: (selected) {
-                            setState(() {
-                              _filterWalletId = selected ? wallet.id : null;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Clear filters button
-                  if (_filterType != null ||
-                      _filterCategory != null ||
-                      _filterWalletId != null)
-                    OutlinedButton(
-                      onPressed: () {
-                        setState(() {
-                          _filterType = null;
-                          _filterCategory = null;
-                          _filterWalletId = null;
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: const Text('Clear All Filters'),
-                    ),
-
-                  const SizedBox(height: 16),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1140,43 +1241,43 @@ class _TimelineScreenState extends State<TimelineScreen>
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Transaction'),
         content: Text(
           'Are you sure you want to delete "${transaction.description}"?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogContext).maybePop(),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              _unifiedService
-                  .deleteTransaction(transaction.id)
-                  .then((_) {
-                    if (mounted) {
-                      Navigator.pop(context); // Close dialog
-                      Navigator.pop(bottomSheetContext); // Close bottom sheet
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Transaction deleted'),
-                          backgroundColor: AppColors.success,
-                        ),
-                      );
-                    }
-                  })
-                  .catchError((error) {
-                    if (mounted) {
-                      Navigator.pop(context); // Close dialog
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: ${error.toString()}'),
-                          backgroundColor: AppColors.error,
-                        ),
-                      );
-                    }
-                  });
+            onPressed: () async {
+              await Navigator.of(
+                dialogContext,
+              ).maybePop(); // Close dialog first
+              await Navigator.of(
+                bottomSheetContext,
+              ).maybePop(); // Close bottom sheet if present
+
+              try {
+                await _unifiedService.deleteTransaction(transaction.id);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Transaction deleted'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              } catch (error) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${error.toString()}'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),

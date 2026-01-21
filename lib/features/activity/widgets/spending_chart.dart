@@ -15,44 +15,52 @@ class SpendingChart extends StatelessWidget {
       return _buildEmptyChart(context);
     }
 
+    final normalizedData = _normalizeEntries();
+    if (normalizedData.isEmpty) {
+      return _buildEmptyChart(context);
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : MediaQuery.of(context).size.width;
-        final maxHeight = math.min(320, availableWidth * 0.8).toDouble();
+        const edgePadding = 24.0;
+        final innerWidth = math.max(0.0, availableWidth - (edgePadding * 2));
+        final chartSize = math.min(200, innerWidth * 0.85).toDouble();
 
         return Container(
-          constraints: BoxConstraints(maxHeight: maxHeight, minHeight: 240),
-          padding: const EdgeInsets.all(20),
+          width: double.infinity,
+          padding: const EdgeInsets.all(edgePadding),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Theme.of(context).dividerColor),
           ),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Chart area
-                AspectRatio(
-                  aspectRatio: 1,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(height: 25),
+              // Chart area
+              Center(
+                child: SizedBox(
+                  height: chartSize,
+                  width: chartSize,
                   child: PieChart(
                     PieChartData(
-                      sections: _buildPieChartSections(),
-                      centerSpaceRadius: availableWidth * 0.18,
+                      sections: _buildPieChartSections(normalizedData),
+                      centerSpaceRadius: chartSize * 0.35,
                       sectionsSpace: 2,
                       startDegreeOffset: -90,
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 50),
 
-                // Legend (auto-wraps)
-                _buildLegend(),
-              ],
-            ),
+              // Legend (auto-wraps)
+              _buildLegend(normalizedData),
+            ],
           ),
         );
       },
@@ -74,14 +82,13 @@ class SpendingChart extends StatelessWidget {
     );
   }
 
-  List<PieChartSectionData> _buildPieChartSections() {
-    final total = spendingData.values.fold<double>(0, (sum, v) => sum + v);
+  List<PieChartSectionData> _buildPieChartSections(
+    List<MapEntry<String, double>> entries,
+  ) {
+    final total = entries.fold<double>(0, (sum, v) => sum + v.value);
     if (total == 0) return [];
 
-    final sortedEntries = spendingData.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return sortedEntries.asMap().entries.map((entry) {
+    return entries.asMap().entries.map((entry) {
       final index = entry.key;
       final label = entry.value.key;
       final amount = entry.value.value;
@@ -100,15 +107,12 @@ class SpendingChart extends StatelessWidget {
     }).toList();
   }
 
-  Widget _buildLegend() {
-    final sortedEntries = spendingData.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
+  Widget _buildLegend(List<MapEntry<String, double>> entries) {
     return Wrap(
       spacing: 16,
       runSpacing: 8,
       alignment: WrapAlignment.center,
-      children: sortedEntries.take(6).toList().asMap().entries.map((entry) {
+      children: entries.asMap().entries.map((entry) {
         final index = entry.key;
         final category = entry.value.key;
         final amount = entry.value.value;
@@ -137,5 +141,21 @@ class SpendingChart extends StatelessWidget {
         );
       }).toList(),
     );
+  }
+
+  List<MapEntry<String, double>> _normalizeEntries() {
+    final sorted = spendingData.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (sorted.length <= 5) {
+      return sorted;
+    }
+    final top = sorted.take(5).toList();
+    final otherTotal = sorted
+        .skip(5)
+        .fold<double>(0, (sum, entry) => sum + entry.value);
+    if (otherTotal > 0) {
+      top.add(MapEntry('Other', otherTotal));
+    }
+    return top;
   }
 }

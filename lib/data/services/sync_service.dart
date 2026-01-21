@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, unrelated_type_equality_checks
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'local_database_service.dart';
@@ -248,7 +250,7 @@ class SyncService {
   Stream<List<Transaction>> getTransactionsStream() async* {
     // Initial load from local DB
     final localTransactions =
-        await _localDb.getTransactions() as List<Transaction>;
+        await _localDb.getTransactions();
     yield localTransactions;
 
     // Periodically sync and update
@@ -258,7 +260,7 @@ class SyncService {
         await syncAll();
       }
       final updatedTransactions =
-          await _localDb.getTransactions() as List<Transaction>;
+          await _localDb.getTransactions();
       yield updatedTransactions;
     }
   }

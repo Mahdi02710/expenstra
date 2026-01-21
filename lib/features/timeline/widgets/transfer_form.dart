@@ -155,6 +155,23 @@ class _TransferFormState extends State<TransferForm> {
                           decoration: InputDecoration(
                             labelText: 'Amount',
                             prefixText: '\$ ',
+                            prefixStyle: AppTextStyles.body2.copyWith(
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.textSecondary,
+                            ),
+                            labelStyle: AppTextStyles.body2.copyWith(
+                              height: 1.1,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.textSecondary,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),

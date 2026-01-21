@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, avoid_types_as_parameter_names
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/transaction.dart' as model;

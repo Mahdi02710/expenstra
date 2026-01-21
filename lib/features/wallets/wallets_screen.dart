@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -19,6 +21,10 @@ class _WalletsScreenState extends State<WalletsScreen>
     with AutomaticKeepAliveClientMixin {
   final UnifiedDataService _unifiedService = UnifiedDataService();
   final ScrollController _scrollController = ScrollController();
+  WalletSortOption _sortOption = WalletSortOption.name;
+  bool _sortAscending = true;
+  Set<WalletType> _typeFilters = {};
+  WalletStatusFilter _statusFilter = WalletStatusFilter.all;
 
   @override
   bool get wantKeepAlive => true;
@@ -81,29 +87,34 @@ class _WalletsScreenState extends State<WalletsScreen>
                       double totalDebt = 0.0;
                       int walletCount = 0;
 
-                      if (walletsSnapshot.hasData && transactionsSnapshot.hasData) {
-                        final wallets = walletsSnapshot.data!;
+                      if (walletsSnapshot.hasData &&
+                          transactionsSnapshot.hasData) {
+                        final wallets = _applyWalletFilters(
+                          walletsSnapshot.data!,
+                        );
                         final transactions = transactionsSnapshot.data!;
                         walletCount = wallets.length;
 
                         // Calculate balances from transactions (starting from initial balance)
                         final Map<String, double> walletBalances = {};
                         for (final wallet in wallets) {
-                          walletBalances[wallet.id] = wallet.balance; // Start with initial balance
+                          walletBalances[wallet.id] =
+                              wallet.balance; // Start with initial balance
                         }
                         for (final tx in transactions) {
                           walletBalances[tx.walletId] =
                               (walletBalances[tx.walletId] ?? 0.0) +
-                                  (tx.type == TransactionType.income
-                                      ? tx.amount
-                                      : -tx.amount);
+                              (tx.type == TransactionType.income
+                                  ? tx.amount
+                                  : -tx.amount);
                         }
 
                         // Calculate totals for net worth
                         // Assets = non-credit wallet balances
                         // Liabilities = credit card debts (negative balances only)
                         for (final wallet in wallets) {
-                          final balance = walletBalances[wallet.id] ?? wallet.balance;
+                          final balance =
+                              walletBalances[wallet.id] ?? wallet.balance;
                           if (wallet.type == WalletType.credit) {
                             // Credit cards: only negative balances are debt
                             // Positive balances (available credit) don't count as assets
@@ -202,7 +213,8 @@ class _WalletsScreenState extends State<WalletsScreen>
                         );
                       }
 
-                      if (walletsSnapshot.connectionState == ConnectionState.waiting) {
+                      if (walletsSnapshot.connectionState ==
+                          ConnectionState.waiting) {
                         return const SliverToBoxAdapter(
                           child: Padding(
                             padding: EdgeInsets.all(32.0),
@@ -211,31 +223,40 @@ class _WalletsScreenState extends State<WalletsScreen>
                         );
                       }
 
-                      final wallets = walletsSnapshot.data ?? [];
+                      var wallets = _applyWalletFilters(
+                        walletsSnapshot.data ?? [],
+                      );
                       final transactions = transactionsSnapshot.data ?? [];
 
                       // Calculate balances for each wallet (initial balance + transactions)
                       final Map<String, double> walletBalances = {};
                       for (final wallet in wallets) {
-                        walletBalances[wallet.id] = wallet.balance; // Start with initial balance
+                        walletBalances[wallet.id] =
+                            wallet.balance; // Start with initial balance
                       }
                       for (final tx in transactions) {
                         walletBalances[tx.walletId] =
                             (walletBalances[tx.walletId] ?? 0.0) +
-                                (tx.type == TransactionType.income
-                                    ? tx.amount
-                                    : -tx.amount);
+                            (tx.type == TransactionType.income
+                                ? tx.amount
+                                : -tx.amount);
                       }
 
                       // Create wallets with updated balances
                       final walletsWithBalances = wallets.map((wallet) {
-                        final balance = walletBalances[wallet.id] ?? wallet.balance;
+                        final balance =
+                            walletBalances[wallet.id] ?? wallet.balance;
                         return wallet.copyWith(balance: balance);
                       }).toList();
 
+                      final sortedWallets = _sortWallets(
+                        walletsWithBalances,
+                        transactions,
+                      );
+
                       return SliverToBoxAdapter(
                         child: WalletGrid(
-                          wallets: walletsWithBalances,
+                          wallets: sortedWallets,
                           onWalletTap: _onWalletTap,
                         ),
                       );
@@ -413,9 +434,11 @@ class _WalletsScreenState extends State<WalletsScreen>
           return const SizedBox();
         }
 
-        final wallet = walletsSnapshot.data!
-            .firstWhere((w) => w.id == walletId, orElse: () => walletsSnapshot.data!.first);
-        
+        final wallet = walletsSnapshot.data!.firstWhere(
+          (w) => w.id == walletId,
+          orElse: () => walletsSnapshot.data!.first,
+        );
+
         return StreamBuilder<List<Transaction>>(
           stream: _unifiedService.getTransactions(),
           builder: (context, transactionsSnapshot) {
@@ -427,7 +450,8 @@ class _WalletsScreenState extends State<WalletsScreen>
             double balance = wallet.balance; // Start with initial balance
             balance += transactions.fold<double>(
               0.0,
-              (sum, tx) => sum +
+              (sum, tx) =>
+                  sum +
                   (tx.type == TransactionType.income ? tx.amount : -tx.amount),
             );
 
@@ -437,7 +461,9 @@ class _WalletsScreenState extends State<WalletsScreen>
               height: MediaQuery.of(context).size.height * 0.8,
               decoration: BoxDecoration(
                 color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
               ),
               child: Column(
                 children: [
@@ -476,14 +502,19 @@ class _WalletsScreenState extends State<WalletsScreen>
 
                         Text(walletWithBalance.name, style: AppTextStyles.h2),
 
-                        Text(walletWithBalance.typeLabel, style: AppTextStyles.body2),
+                        Text(
+                          walletWithBalance.typeLabel,
+                          style: AppTextStyles.body2,
+                        ),
 
                         const SizedBox(height: 16),
 
                         Text(
                           walletWithBalance.formattedBalanceWithSign,
                           style: AppTextStyles.currencyLarge.copyWith(
-                            color: walletWithBalance.isCredit && walletWithBalance.balance < 0
+                            color:
+                                walletWithBalance.isCredit &&
+                                    walletWithBalance.balance < 0
                                 ? AppColors.expense
                                 : AppColors.income,
                           ),
@@ -503,7 +534,8 @@ class _WalletsScreenState extends State<WalletsScreen>
                               Tab(text: 'Details'),
                               Tab(text: 'Transactions'),
                             ],
-                            labelColor: Theme.of(context).brightness == Brightness.dark
+                            labelColor:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? AppColors.gold
                                 : AppColors.primary,
                             unselectedLabelColor: AppColors.textMuted,
@@ -512,7 +544,10 @@ class _WalletsScreenState extends State<WalletsScreen>
                           Expanded(
                             child: TabBarView(
                               children: [
-                                _buildWalletDetailsTab(walletWithBalance),
+                                _buildWalletDetailsTab(
+                                  walletWithBalance,
+                                  hasTransactions: transactions.isNotEmpty,
+                                ),
                                 _buildWalletTransactionsTab(transactions),
                               ],
                             ),
@@ -530,7 +565,10 @@ class _WalletsScreenState extends State<WalletsScreen>
     );
   }
 
-  Widget _buildWalletDetailsTab(Wallet wallet) {
+  Widget _buildWalletDetailsTab(
+    Wallet wallet, {
+    required bool hasTransactions,
+  }) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -553,7 +591,8 @@ class _WalletsScreenState extends State<WalletsScreen>
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _editWallet(wallet),
+                  onPressed: () =>
+                      _editWallet(wallet, bottomSheetContext: context),
                   icon: const Icon(Icons.edit),
                   label: const Text('Edit'),
                 ),
@@ -561,7 +600,11 @@ class _WalletsScreenState extends State<WalletsScreen>
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _deleteWallet(wallet),
+                  onPressed: () => _deleteWallet(
+                    wallet,
+                    bottomSheetContext: context,
+                    hasTransactions: hasTransactions,
+                  ),
                   icon: const Icon(Icons.delete),
                   label: const Text('Delete'),
                   style: ElevatedButton.styleFrom(
@@ -665,8 +708,13 @@ class _WalletsScreenState extends State<WalletsScreen>
     });
   }
 
-  void _editWallet(Wallet wallet) {
-    Navigator.pop(context); // Close detail sheet
+  void _editWallet(Wallet wallet, {BuildContext? bottomSheetContext}) {
+    if (bottomSheetContext != null) {
+      final navigator = Navigator.of(bottomSheetContext);
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -700,46 +748,70 @@ class _WalletsScreenState extends State<WalletsScreen>
     });
   }
 
-  void _deleteWallet(Wallet wallet) {
-    Navigator.pop(context); // Close detail sheet
+  void _deleteWallet(
+    Wallet wallet, {
+    BuildContext? bottomSheetContext,
+    bool hasTransactions = false,
+  }) {
+    if (hasTransactions) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Wallet has transactions'),
+          content: const Text(
+            'Please delete or move the wallet transactions before removing this wallet.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Wallet'),
         content: Text(
           'Are you sure you want to delete "${wallet.name}"? This action cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              _unifiedService
-                  .deleteWallet(wallet.id)
-                  .then((_) {
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Wallet deleted successfully'),
-                          backgroundColor: AppColors.success,
-                        ),
-                      );
-                    }
-                  })
-                  .catchError((error) {
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: ${error.toString()}'),
-                          backgroundColor: AppColors.error,
-                        ),
-                      );
-                    }
-                  });
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              if (bottomSheetContext != null) {
+                final navigator = Navigator.of(bottomSheetContext);
+                if (navigator.canPop()) {
+                  navigator.pop();
+                }
+              }
+
+              try {
+                await _unifiedService.deleteWallet(wallet.id);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Wallet deleted successfully'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              } catch (error) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${error.toString()}'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),
@@ -774,7 +846,7 @@ class _WalletsScreenState extends State<WalletsScreen>
               leading: const Icon(Icons.add),
               title: const Text('Add Wallet'),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.of(context).maybePop();
                 _showAddWalletSheet();
               },
             ),
@@ -782,16 +854,16 @@ class _WalletsScreenState extends State<WalletsScreen>
               leading: const Icon(Icons.sort),
               title: const Text('Sort Wallets'),
               onTap: () {
-                Navigator.pop(context);
-                // TODO: Implement sorting
+                Navigator.of(context).maybePop();
+                _showSortSheet();
               },
             ),
             ListTile(
               leading: const Icon(Icons.filter_list),
               title: const Text('Filter Wallets'),
               onTap: () {
-                Navigator.pop(context);
-                // TODO: Implement filtering
+                Navigator.of(context).maybePop();
+                _showFilterSheet();
               },
             ),
             const SizedBox(height: 16),
@@ -801,20 +873,458 @@ class _WalletsScreenState extends State<WalletsScreen>
     );
   }
 
-  void _showManageWalletsScreen() {
-    // Show manage wallets dialog or navigate to screen
-    showDialog(
+  void _showSortSheet() {
+    var tempOption = _sortOption;
+    var tempAscending = _sortAscending;
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Manage Wallets'),
-        content: const Text('Wallet management features coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  'Sort Wallets',
+                  style: AppTextStyles.h3.copyWith(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...WalletSortOption.values.map(
+                  (option) => RadioListTile<WalletSortOption>(
+                    title: Text(_sortLabel(option)),
+                    value: option,
+                    groupValue: tempOption,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setSheetState(() => tempOption = value);
+                    },
+                  ),
+                ),
+                SwitchListTile(
+                  title: const Text('Ascending'),
+                  value: tempAscending,
+                  onChanged: (value) =>
+                      setSheetState(() => tempAscending = value),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            tempOption = WalletSortOption.name;
+                            tempAscending = true;
+                          });
+                        },
+                        child: const Text('Reset'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _sortOption = tempOption;
+                            _sortAscending = tempAscending;
+                          });
+                          final navigator = Navigator.of(context);
+                          if (navigator.canPop()) {
+                            navigator.pop();
+                          }
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showFilterSheet() {
+    final tempTypes = Set<WalletType>.from(_typeFilters);
+    var tempStatus = _statusFilter;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  'Filter Wallets',
+                  style: AppTextStyles.h3.copyWith(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Type', style: AppTextStyles.subtitle2),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: WalletType.values.map((type) {
+                    final selected = tempTypes.contains(type);
+                    return FilterChip(
+                      label: Text(_typeLabel(type)),
+                      selected: selected,
+                      onSelected: (value) {
+                        setSheetState(() {
+                          if (value) {
+                            tempTypes.add(type);
+                          } else {
+                            tempTypes.remove(type);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                Text('Status', style: AppTextStyles.subtitle2),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: WalletStatusFilter.values.map((status) {
+                    return ChoiceChip(
+                      label: Text(_statusLabel(status)),
+                      selected: tempStatus == status,
+                      onSelected: (_) =>
+                          setSheetState(() => tempStatus = status),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            tempTypes.clear();
+                            tempStatus = WalletStatusFilter.all;
+                          });
+                        },
+                        child: const Text('Clear'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _typeFilters = tempTypes;
+                            _statusFilter = tempStatus;
+                          });
+                          final navigator = Navigator.of(context);
+                          if (navigator.canPop()) {
+                            navigator.pop();
+                          }
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Wallet> _applyWalletFilters(List<Wallet> wallets) {
+    var filtered = wallets;
+    if (_typeFilters.isNotEmpty) {
+      filtered = filtered
+          .where((wallet) => _typeFilters.contains(wallet.type))
+          .toList();
+    }
+    switch (_statusFilter) {
+      case WalletStatusFilter.active:
+        filtered = filtered.where((wallet) => wallet.isActive).toList();
+        break;
+      case WalletStatusFilter.inactive:
+        filtered = filtered.where((wallet) => !wallet.isActive).toList();
+        break;
+      case WalletStatusFilter.all:
+        break;
+    }
+    return filtered;
+  }
+
+  List<Wallet> _sortWallets(
+    List<Wallet> wallets,
+    List<Transaction> transactions,
+  ) {
+    final sorted = [...wallets];
+    int compare(Wallet a, Wallet b) {
+      switch (_sortOption) {
+        case WalletSortOption.balance:
+          return a.balance.compareTo(b.balance);
+        case WalletSortOption.type:
+          return a.type.name.compareTo(b.type.name);
+        case WalletSortOption.lastActivity:
+          final aDate = _latestTransactionDate(transactions, a.id);
+          final bDate = _latestTransactionDate(transactions, b.id);
+          return (aDate ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(
+            bDate ?? DateTime.fromMillisecondsSinceEpoch(0),
+          );
+        case WalletSortOption.name:
+        // ignore: unreachable_switch_default
+        default:
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      }
+    }
+
+    sorted.sort((a, b) => _sortAscending ? compare(a, b) : compare(b, a));
+    return sorted;
+  }
+
+  DateTime? _latestTransactionDate(List<Transaction> transactions, String id) {
+    DateTime? latest;
+    for (final tx in transactions) {
+      if (tx.walletId != id) continue;
+      if (latest == null || tx.date.isAfter(latest)) {
+        latest = tx.date;
+      }
+    }
+    return latest;
+  }
+
+  String _typeLabel(WalletType type) {
+    switch (type) {
+      case WalletType.bank:
+        return 'Bank';
+      case WalletType.savings:
+        return 'Savings';
+      case WalletType.credit:
+        return 'Credit';
+      case WalletType.cash:
+        return 'Cash';
+      case WalletType.investment:
+        return 'Investment';
+    }
+  }
+
+  String _statusLabel(WalletStatusFilter filter) {
+    switch (filter) {
+      case WalletStatusFilter.active:
+        return 'Active';
+      case WalletStatusFilter.inactive:
+        return 'Inactive';
+      case WalletStatusFilter.all:
+        return 'All';
+    }
+  }
+
+  String _sortLabel(WalletSortOption option) {
+    switch (option) {
+      case WalletSortOption.name:
+        return 'Name';
+      case WalletSortOption.balance:
+        return 'Balance';
+      case WalletSortOption.type:
+        return 'Type';
+      case WalletSortOption.lastActivity:
+        return 'Last Activity';
+    }
+  }
+
+  void _showManageWalletsScreen() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Row(
+                children: [
+                  Text(
+                    'Manage Wallets',
+                    style: AppTextStyles.h3.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () {
+                      final navigator = Navigator.of(sheetContext);
+                      if (navigator.canPop()) {
+                        navigator.pop();
+                      }
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: StreamBuilder<List<Wallet>>(
+                  stream: _unifiedService.getWallets(),
+                  builder: (context, walletsSnapshot) {
+                    final wallets = walletsSnapshot.data ?? [];
+                    return StreamBuilder<List<Transaction>>(
+                      stream: _unifiedService.getTransactions(),
+                      builder: (context, transactionsSnapshot) {
+                        final transactions = transactionsSnapshot.data ?? [];
+                        final txCountByWallet = <String, int>{};
+                        for (final tx in transactions) {
+                          txCountByWallet[tx.walletId] =
+                              (txCountByWallet[tx.walletId] ?? 0) + 1;
+                        }
+
+                        if (wallets.isEmpty) {
+                          return const Center(child: Text('No wallets found.'));
+                        }
+
+                        return ListView.separated(
+                          itemCount: wallets.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final wallet = wallets[index];
+                            final txCount = txCountByWallet[wallet.id] ?? 0;
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
+                              leading: CircleAvatar(
+                                backgroundColor: AppColors.primary.withValues(
+                                  alpha: 0.1,
+                                ),
+                                child: Text(wallet.icon),
+                              ),
+                              title: Text(
+                                wallet.name,
+                                style: AppTextStyles.subtitle1.copyWith(
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? AppColors.darkTextPrimary
+                                      : AppColors.textPrimary,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${wallet.typeLabel} · $txCount transactions',
+                                style: AppTextStyles.caption,
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Switch(
+                                    value: wallet.isActive,
+                                    onChanged: (value) {
+                                      _unifiedService.updateWallet(
+                                        wallet.copyWith(isActive: value),
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () => _editWallet(
+                                      wallet,
+                                      bottomSheetContext: sheetContext,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => _deleteWallet(
+                                      wallet,
+                                      bottomSheetContext: sheetContext,
+                                      hasTransactions: txCount > 0,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
+
+enum WalletSortOption { name, balance, type, lastActivity }
+
+enum WalletStatusFilter { all, active, inactive }

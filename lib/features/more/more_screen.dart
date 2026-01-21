@@ -1,5 +1,8 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:expensetra/core/theme/app_colors.dart';
 import 'package:expensetra/core/theme/app_text_styles.dart';
+import 'package:expensetra/data/models/wallet.dart';
 import 'package:expensetra/data/services/auth_service.dart';
 import 'package:expensetra/data/services/unified_data_service.dart';
 import 'package:expensetra/data/services/notification_service.dart';
@@ -11,6 +14,7 @@ import 'package:expensetra/login_page/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:expensetra/data/models/recurring_payment.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -99,9 +103,7 @@ class _MoreScreenState extends State<MoreScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Sign Out'),
         content: const Text(
           'Are you sure you want to sign out? You\'ll need to sign in again to access your data.',
@@ -200,34 +202,7 @@ class _MoreScreenState extends State<MoreScreen>
                 child: _cardAnimation != null
                     ? FadeTransition(
                         opacity: _cardAnimation!,
-                        child: _buildSettingsSection(
-                          'Account',
-                          [
-                            _SettingsItem(
-                              icon: Icons.person_outline,
-                              title: 'Profile Settings',
-                              subtitle: user?.email ?? 'Not signed in',
-                              onTap: () => _showProfileSettings(user, isDark),
-                            ),
-                            _SettingsItem(
-                              icon: Icons.security,
-                              title: 'Security & Privacy',
-                              subtitle: 'Passcode and biometrics',
-                              onTap: () => _showSecuritySettings(isDark),
-                            ),
-                            _SettingsItem(
-                              icon: Icons.notifications_outlined,
-                              title: 'Notifications',
-                              subtitle: 'Reminders and budget alerts',
-                              onTap: () => _showNotificationSettings(isDark),
-                            ),
-                          ],
-                          isDark,
-                        ),
-                      )
-                    : _buildSettingsSection(
-                        'Account',
-                        [
+                        child: _buildSettingsSection('Account', [
                           _SettingsItem(
                             icon: Icons.person_outline,
                             title: 'Profile Settings',
@@ -246,9 +221,28 @@ class _MoreScreenState extends State<MoreScreen>
                             subtitle: 'Reminders and budget alerts',
                             onTap: () => _showNotificationSettings(isDark),
                           ),
-                        ],
-                        isDark,
-                      ),
+                        ], isDark),
+                      )
+                    : _buildSettingsSection('Account', [
+                        _SettingsItem(
+                          icon: Icons.person_outline,
+                          title: 'Profile Settings',
+                          subtitle: user?.email ?? 'Not signed in',
+                          onTap: () => _showProfileSettings(user, isDark),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.security,
+                          title: 'Security & Privacy',
+                          subtitle: 'Passcode and biometrics',
+                          onTap: () => _showSecuritySettings(isDark),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.notifications_outlined,
+                          title: 'Notifications',
+                          subtitle: 'Reminders and budget alerts',
+                          onTap: () => _showNotificationSettings(isDark),
+                        ),
+                      ], isDark),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -258,34 +252,7 @@ class _MoreScreenState extends State<MoreScreen>
                 child: _cardAnimation != null
                     ? FadeTransition(
                         opacity: _cardAnimation!,
-                        child: _buildSettingsSection(
-                          'Preferences',
-                          [
-                            _SettingsItem(
-                              icon: Icons.palette_outlined,
-                              title: 'Appearance',
-                              subtitle: 'Theme, colors, and display options',
-                              onTap: () => _showThemeSelector(isDark),
-                            ),
-                            _SettingsItem(
-                              icon: Icons.language,
-                              title: 'Language & Region',
-                              subtitle: 'Currency and exchange rates',
-                              onTap: () => _showCurrencySettings(isDark),
-                            ),
-                            _SettingsItem(
-                              icon: Icons.backup_outlined,
-                              title: 'Backup & Sync',
-                              subtitle: 'Manual backup and sync',
-                              onTap: () => _showBackupAndSync(isDark),
-                            ),
-                          ],
-                          isDark,
-                        ),
-                      )
-                    : _buildSettingsSection(
-                        'Preferences',
-                        [
+                        child: _buildSettingsSection('Preferences', [
                           _SettingsItem(
                             icon: Icons.palette_outlined,
                             title: 'Appearance',
@@ -304,9 +271,28 @@ class _MoreScreenState extends State<MoreScreen>
                             subtitle: 'Manual backup and sync',
                             onTap: () => _showBackupAndSync(isDark),
                           ),
-                        ],
-                        isDark,
-                      ),
+                        ], isDark),
+                      )
+                    : _buildSettingsSection('Preferences', [
+                        _SettingsItem(
+                          icon: Icons.palette_outlined,
+                          title: 'Appearance',
+                          subtitle: 'Theme, colors, and display options',
+                          onTap: () => _showThemeSelector(isDark),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.language,
+                          title: 'Language & Region',
+                          subtitle: 'Currency and exchange rates',
+                          onTap: () => _showCurrencySettings(isDark),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.backup_outlined,
+                          title: 'Backup & Sync',
+                          subtitle: 'Manual backup and sync',
+                          onTap: () => _showBackupAndSync(isDark),
+                        ),
+                      ], isDark),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -316,34 +302,7 @@ class _MoreScreenState extends State<MoreScreen>
                 child: _cardAnimation != null
                     ? FadeTransition(
                         opacity: _cardAnimation!,
-                        child: _buildSettingsSection(
-                          'Features',
-                          [
-                            _SettingsItem(
-                              icon: Icons.category_outlined,
-                              title: 'Categories',
-                              subtitle: 'Manage transaction categories',
-                              onTap: () => _showCategoryManager(isDark),
-                            ),
-                            _SettingsItem(
-                              icon: Icons.import_export,
-                              title: 'Import & Export',
-                              subtitle: 'Import/export your financial data',
-                              onTap: () => _showComingSoon('Data Import/Export'),
-                            ),
-                            _SettingsItem(
-                              icon: Icons.schedule,
-                              title: 'Recurring Wallets',
-                              subtitle: 'Monthly rollover settings',
-                              onTap: _showRecurringWalletInfo,
-                            ),
-                          ],
-                          isDark,
-                        ),
-                      )
-                    : _buildSettingsSection(
-                        'Features',
-                        [
+                        child: _buildSettingsSection('Features', [
                           _SettingsItem(
                             icon: Icons.category_outlined,
                             title: 'Categories',
@@ -358,13 +317,32 @@ class _MoreScreenState extends State<MoreScreen>
                           ),
                           _SettingsItem(
                             icon: Icons.schedule,
-                            title: 'Recurring Wallets',
-                            subtitle: 'Monthly rollover settings',
-                            onTap: _showRecurringWalletInfo,
+                            title: 'Reccuring Payments',
+                            subtitle: 'Add Periodic Payments',
+                            onTap: () => _showRecurringPayments(isDark),
                           ),
-                        ],
-                        isDark,
-                      ),
+                        ], isDark),
+                      )
+                    : _buildSettingsSection('Features', [
+                        _SettingsItem(
+                          icon: Icons.category_outlined,
+                          title: 'Categories',
+                          subtitle: 'Manage transaction categories',
+                          onTap: () => _showCategoryManager(isDark),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.import_export,
+                          title: 'Import & Export',
+                          subtitle: 'Import/export your financial data',
+                          onTap: () => _showComingSoon('Data Import/Export'),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.schedule,
+                          title: 'Reccuring Payments',
+                          subtitle: 'Add Periodic Payments',
+                          onTap: () => _showRecurringPayments(isDark),
+                        ),
+                      ], isDark),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -374,34 +352,7 @@ class _MoreScreenState extends State<MoreScreen>
                 child: _cardAnimation != null
                     ? FadeTransition(
                         opacity: _cardAnimation!,
-                        child: _buildSettingsSection(
-                          'Support',
-                          [
-                            _SettingsItem(
-                              icon: Icons.help_outline,
-                              title: 'Help Center',
-                              subtitle: 'FAQs and support articles',
-                              onTap: () => _showComingSoon('Help Center'),
-                            ),
-                            _SettingsItem(
-                              icon: Icons.feedback_outlined,
-                              title: 'Send Feedback',
-                              subtitle: 'Help us improve ExpensTra',
-                              onTap: () => _showComingSoon('Feedback'),
-                            ),
-                            _SettingsItem(
-                              icon: Icons.info_outline,
-                              title: 'About ExpensTra',
-                              subtitle: 'Version info and legal documents',
-                              onTap: () => _showAboutDialog(isDark),
-                            ),
-                          ],
-                          isDark,
-                        ),
-                      )
-                    : _buildSettingsSection(
-                        'Support',
-                        [
+                        child: _buildSettingsSection('Support', [
                           _SettingsItem(
                             icon: Icons.help_outline,
                             title: 'Help Center',
@@ -420,9 +371,28 @@ class _MoreScreenState extends State<MoreScreen>
                             subtitle: 'Version info and legal documents',
                             onTap: () => _showAboutDialog(isDark),
                           ),
-                        ],
-                        isDark,
-                      ),
+                        ], isDark),
+                      )
+                    : _buildSettingsSection('Support', [
+                        _SettingsItem(
+                          icon: Icons.help_outline,
+                          title: 'Help Center',
+                          subtitle: 'FAQs and support articles',
+                          onTap: () => _showComingSoon('Help Center'),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.feedback_outlined,
+                          title: 'Send Feedback',
+                          subtitle: 'Help us improve ExpensTra',
+                          onTap: () => _showComingSoon('Feedback'),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.info_outline,
+                          title: 'About ExpensTra',
+                          subtitle: 'Version info and legal documents',
+                          onTap: () => _showAboutDialog(isDark),
+                        ),
+                      ], isDark),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -453,12 +423,15 @@ class _MoreScreenState extends State<MoreScreen>
           margin: const EdgeInsets.all(24),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: isDark ? AppColors.goldGradient : AppColors.primaryGradient,
+            gradient: isDark
+                ? AppColors.goldGradient
+                : AppColors.primaryGradient,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: (isDark ? AppColors.gold : AppColors.primary)
-                    .withValues(alpha: 0.3),
+                color: (isDark ? AppColors.gold : AppColors.primary).withValues(
+                  alpha: 0.3,
+                ),
                 blurRadius: 30,
                 offset: const Offset(0, 10),
               ),
@@ -485,11 +458,7 @@ class _MoreScreenState extends State<MoreScreen>
                           fit: BoxFit.cover,
                         ),
                       )
-                    : const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 35,
-                      ),
+                    : const Icon(Icons.person, color: Colors.white, size: 35),
               ),
 
               const SizedBox(width: 16),
@@ -589,9 +558,7 @@ class _MoreScreenState extends State<MoreScreen>
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor,
-                    ),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.05),
@@ -690,10 +657,7 @@ class _MoreScreenState extends State<MoreScreen>
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -725,7 +689,9 @@ class _MoreScreenState extends State<MoreScreen>
           Text(
             label,
             style: AppTextStyles.caption.copyWith(
-              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
             ),
           ),
         ],
@@ -746,9 +712,7 @@ class _MoreScreenState extends State<MoreScreen>
           child: Text(
             title,
             style: AppTextStyles.h4.copyWith(
-              color: isDark
-                  ? AppColors.darkTextPrimary
-                  : AppColors.textPrimary,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
             ),
           ),
         ),
@@ -782,8 +746,12 @@ class _MoreScreenState extends State<MoreScreen>
                     child: InkWell(
                       onTap: item.onTap,
                       borderRadius: BorderRadius.vertical(
-                        top: index == 0 ? const Radius.circular(16) : Radius.zero,
-                        bottom: isLast ? const Radius.circular(16) : Radius.zero,
+                        top: index == 0
+                            ? const Radius.circular(16)
+                            : Radius.zero,
+                        bottom: isLast
+                            ? const Radius.circular(16)
+                            : Radius.zero,
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -796,13 +764,18 @@ class _MoreScreenState extends State<MoreScreen>
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: (isDark ? AppColors.gold : AppColors.primary)
-                                    .withValues(alpha: 0.1),
+                                color:
+                                    (isDark
+                                            ? AppColors.gold
+                                            : AppColors.primary)
+                                        .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
                                 item.icon,
-                                color: isDark ? AppColors.gold : AppColors.primary,
+                                color: isDark
+                                    ? AppColors.gold
+                                    : AppColors.primary,
                                 size: 22,
                               ),
                             ),
@@ -911,9 +884,9 @@ class _MoreScreenState extends State<MoreScreen>
         onPressed: () async {
           await _sessionService.setGuestMode(false);
           if (!mounted) return;
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const LoginPage()),
-          );
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const LoginPage()));
         },
         icon: const Icon(Icons.login, size: 20),
         label: const Text(
@@ -988,8 +961,9 @@ class _MoreScreenState extends State<MoreScreen>
               Text(
                 'Sign in to edit profile details.',
                 style: AppTextStyles.body2.copyWith(
-                  color:
-                      isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -1091,9 +1065,7 @@ class _MoreScreenState extends State<MoreScreen>
             ListTile(
               leading: const Icon(Icons.lock_outline),
               title: const Text('App Passcode'),
-              subtitle: Text(
-                existingPasscode == null ? 'Not set' : 'Enabled',
-              ),
+              subtitle: Text(existingPasscode == null ? 'Not set' : 'Enabled'),
               trailing: TextButton(
                 onPressed: () {
                   Navigator.pop(context);
@@ -1242,7 +1214,9 @@ class _MoreScreenState extends State<MoreScreen>
             ),
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1266,15 +1240,26 @@ class _MoreScreenState extends State<MoreScreen>
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedCurrency,
-                  items: const [
-                    DropdownMenuItem(value: 'USD', child: Text('USD')),
-                    DropdownMenuItem(value: 'LBP', child: Text('LBP')),
+                  initialValue: selectedCurrency,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'USD',
+                      child: Text('USD', style: AppTextStyles.body2),
+                    ),
+                    DropdownMenuItem(
+                      value: 'LBP',
+                      child: Text('LBP', style: AppTextStyles.body2),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
                     setModalState(() => selectedCurrency = value);
                   },
+                  style: AppTextStyles.body2.copyWith(
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'Default currency',
                     border: OutlineInputBorder(),
@@ -1283,7 +1268,9 @@ class _MoreScreenState extends State<MoreScreen>
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: rateController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'LBP per 1 USD',
                     border: OutlineInputBorder(),
@@ -1430,12 +1417,17 @@ class _MoreScreenState extends State<MoreScreen>
                   itemBuilder: (context, index) {
                     final item = customCategories[index];
                     return ListTile(
-                      leading: Text(item.icon, style: const TextStyle(fontSize: 24)),
+                      leading: Text(
+                        item.icon,
+                        style: const TextStyle(fontSize: 24),
+                      ),
                       title: Text(item.name),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline),
                         onPressed: () async {
-                          await _categoryService.removeCustomCategory(item.name);
+                          await _categoryService.removeCustomCategory(
+                            item.name,
+                          );
                           if (!mounted) return;
                           Navigator.pop(context);
                           _showCategoryManager(isDark);
@@ -1513,22 +1505,426 @@ class _MoreScreenState extends State<MoreScreen>
     );
   }
 
-  void _showRecurringWalletInfo() {
-    showDialog(
+  void _showRecurringPayments(bool isDark) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Recurring Wallets'),
-        content: const Text(
-          'You can enable monthly rollover when adding or editing a wallet.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Reccuring Payments',
+                      style: AppTextStyles.h3.copyWith(
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<List<Wallet>>(
+                  stream: _unifiedService.getWallets(),
+                  builder: (context, walletSnapshot) {
+                    final wallets = walletSnapshot.data ?? [];
+                    final walletNames = {
+                      for (final wallet in wallets) wallet.id: wallet.name,
+                    };
+                    return FutureBuilder<List<RecurringPayment>>(
+                      future: _unifiedService.getRecurringPayments(),
+                      builder: (context, snapshot) {
+                        final payments = snapshot.data ?? [];
+                        if (payments.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Text(
+                              'No recurring payments yet.',
+                              style: AppTextStyles.body2.copyWith(
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          );
+                        }
+                        return ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight:
+                                MediaQuery.of(context).size.height * 0.45,
+                          ),
+                          child: ListView.builder(
+                            itemCount: payments.length,
+                            itemBuilder: (context, index) {
+                              final payment = payments[index];
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Text(
+                                  payment.icon,
+                                  style: const TextStyle(fontSize: 22),
+                                ),
+                                title: Text(payment.name),
+                                subtitle: Text(
+                                  '${walletNames[payment.walletId] ?? 'Wallet'} • '
+                                  '${_recurrenceLabel(payment.period)} • '
+                                  'Next: ${DateFormat('MMM dd, yyyy').format(payment.nextRunAt)}',
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () async {
+                                    await _unifiedService
+                                        .deleteRecurringPayment(payment.id);
+                                    setModalState(() {});
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await _showAddRecurringPayment(isDark);
+                    setModalState(() {});
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Reccuring Payment'),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _showAddRecurringPayment(bool isDark) async {
+    final nameController = TextEditingController();
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+    final customCategories = await _categoryService.getCustomCategories();
+    final categories = [
+      ..._categoryService.defaultCategories,
+      ...customCategories,
+    ];
+    CategoryItem selectedCategory = categories.isNotEmpty
+        ? categories.first
+        : const CategoryItem(name: 'Other', icon: '💰');
+    DateTime selectedDate = DateTime.now();
+    RecurrencePeriod selectedPeriod = RecurrencePeriod.monthly;
+    String? selectedWalletId;
+
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Text(
+                    'Add Reccuring Payment',
+                    style: AppTextStyles.h3.copyWith(
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Payment name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<CategoryItem>(
+                    initialValue: selectedCategory,
+                    items: categories
+                        .map(
+                          (item) => DropdownMenuItem(
+                            value: item,
+                            child: Text(
+                              '${item.icon} ${item.name}',
+                              style: AppTextStyles.body2,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setModalState(() => selectedCategory = value);
+                    },
+                    style: AppTextStyles.body2.copyWith(
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  StreamBuilder<List<Wallet>>(
+                    stream: _unifiedService.getWallets(),
+                    builder: (context, snapshot) {
+                      final wallets = snapshot.data ?? [];
+                      if (wallets.isNotEmpty && selectedWalletId == null) {
+                        selectedWalletId = wallets.first.id;
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            initialValue: selectedWalletId,
+                            items: wallets
+                                .map(
+                                  (wallet) => DropdownMenuItem(
+                                    value: wallet.id,
+                                    child: Text(
+                                      '${wallet.icon} ${wallet.name}',
+                                      style: AppTextStyles.body2,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: wallets.isEmpty
+                                ? null
+                                : (value) {
+                                    if (value == null) return;
+                                    setModalState(
+                                      () => selectedWalletId = value,
+                                    );
+                                  },
+                            style: AppTextStyles.body2.copyWith(
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.textPrimary,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Wallet',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          if (wallets.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                'Add a wallet to use recurring payments.',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<RecurrencePeriod>(
+                    initialValue: selectedPeriod,
+                    items: RecurrencePeriod.values
+                        .map(
+                          (period) => DropdownMenuItem(
+                            value: period,
+                            child: Text(
+                              _recurrenceLabel(period),
+                              style: AppTextStyles.body2,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setModalState(() => selectedPeriod = value);
+                    },
+                    style: AppTextStyles.body2.copyWith(
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Repeat',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('First payment date'),
+                    subtitle: Text(
+                      DateFormat('MMM dd, yyyy').format(selectedDate),
+                    ),
+                    trailing: const Icon(Icons.calendar_today, size: 18),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now().add(
+                          const Duration(days: 3650),
+                        ),
+                      );
+                      if (picked == null) return;
+                      setModalState(() => selectedDate = picked);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: noteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Note (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final amount = double.tryParse(
+                        amountController.text.trim(),
+                      );
+                      if (amount == null || amount <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Enter a valid amount'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                        return;
+                      }
+                      if (selectedWalletId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Select a wallet'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                        return;
+                      }
+
+                      final name = nameController.text.trim().isEmpty
+                          ? selectedCategory.name
+                          : nameController.text.trim();
+                      final payment = RecurringPayment(
+                        id: DateTime.now().microsecondsSinceEpoch.toString(),
+                        name: name,
+                        amount: amount,
+                        category: selectedCategory.name,
+                        icon: selectedCategory.icon,
+                        walletId: selectedWalletId!,
+                        note: noteController.text.trim().isEmpty
+                            ? null
+                            : noteController.text.trim(),
+                        period: selectedPeriod,
+                        startDate: selectedDate,
+                        nextRunAt: selectedDate,
+                      );
+                      await _unifiedService.addRecurringPayment(payment);
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Reccuring payment added'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _recurrenceLabel(RecurrencePeriod period) {
+    switch (period) {
+      case RecurrencePeriod.daily:
+        return 'Daily';
+      case RecurrencePeriod.weekly:
+        return 'Weekly';
+      case RecurrencePeriod.monthly:
+        return 'Monthly';
+      case RecurrencePeriod.yearly:
+        return 'Yearly';
+    }
   }
 
   void _promptPasscode(bool hasPasscode) {
@@ -1647,9 +2043,7 @@ class _MoreScreenState extends State<MoreScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Coming Soon'),
         content: Text('$feature will be available in a future update.'),
         actions: [
@@ -1681,12 +2075,7 @@ class _MoreScreenState extends State<MoreScreen>
           gradient: isDark ? AppColors.goldGradient : AppColors.primaryGradient,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Center(
-          child: Text(
-            '💰',
-            style: TextStyle(fontSize: 30),
-          ),
-        ),
+        child: const Center(child: Text('💰', style: TextStyle(fontSize: 30))),
       ),
       children: [
         const SizedBox(height: 16),
@@ -1697,7 +2086,9 @@ class _MoreScreenState extends State<MoreScreen>
         Text(
           'Built with Flutter & Firebase',
           style: TextStyle(
-            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+            color: isDark
+                ? AppColors.darkTextSecondary
+                : AppColors.textSecondary,
             fontSize: 12,
           ),
         ),

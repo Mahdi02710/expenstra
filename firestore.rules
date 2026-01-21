@@ -33,6 +33,12 @@ service cloud.firestore {
         // Users can read/write their own budgets
         allow read, write: if isOwner(userId);
       }
+
+      // Analytics subcollection
+      match /analytics/{analyticsId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
     }
   }
 }

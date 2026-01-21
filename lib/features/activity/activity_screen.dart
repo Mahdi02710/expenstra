@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/services/unified_data_service.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/wallet.dart';
+import '../../data/services/analytics_service.dart';
+import '../../data/models/analytics_summary.dart';
 import 'widgets/spending_chart.dart';
 import 'widgets/category_breakdown.dart';
 import 'widgets/monthly_summary.dart';
@@ -18,6 +22,7 @@ class ActivityScreen extends StatefulWidget {
 class _ActivityScreenState extends State<ActivityScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   final UnifiedDataService _unifiedService = UnifiedDataService();
+  final AnalyticsService _analyticsService = AnalyticsService();
   final ScrollController _scrollController = ScrollController();
   late TabController _tabController;
 
@@ -107,7 +112,13 @@ class _ActivityScreenState extends State<ActivityScreen>
                     labelColor: Theme.of(context).brightness == Brightness.dark
                         ? AppColors.gold
                         : AppColors.primary,
-                    unselectedLabelColor: AppColors.textMuted,
+                    unselectedLabelColor: AppColors.textSecondary,
+                    labelStyle: AppTextStyles.subtitle2.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    unselectedLabelStyle: AppTextStyles.subtitle2.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                     indicatorColor:
                         Theme.of(context).brightness == Brightness.dark
                         ? AppColors.gold
@@ -219,7 +230,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 26),
 
                 SpendingChart(spendingData: categorySpending),
 
@@ -228,7 +239,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                 // Quick Stats
                 _buildQuickStats(transactions, categorySpending),
 
-                const SizedBox(height: 100),
+                const SizedBox(height: 60),
               ],
             ),
           );
@@ -294,6 +305,39 @@ class _ActivityScreenState extends State<ActivityScreen>
   }
 
   Widget _buildTrendsTab() {
+    return StreamBuilder<AnalyticsSummary?>(
+      stream: _analyticsService.getSummary(),
+      builder: (context, analyticsSnapshot) {
+        final summary = analyticsSnapshot.data;
+        if (summary != null && summary.monthlyTotals.isNotEmpty) {
+          return _buildTrendsFromAnalytics(summary);
+        }
+        return _buildTrendsFromTransactions();
+      },
+    );
+  }
+
+  Widget _buildTrendsFromAnalytics(AnalyticsSummary summary) {
+    final months = summary.monthlyTotals.map((total) => total.month).toList()
+      ..sort((a, b) => a.compareTo(b));
+    final monthlyTotals = <DateTime, double>{
+      for (final total in summary.monthlyTotals) total.month: total.value,
+    };
+    final forecast = summary.forecast?.nextMonth ?? 0.0;
+    final insights = summary.insights.map(_mapAnalyticsInsight).toList();
+    final forecastExplanation = summary.forecast?.explanation ?? '';
+    if (forecastExplanation.isNotEmpty) {
+      insights.insert(
+        0,
+        _TrendInsight(
+          icon: Icons.auto_graph,
+          title: 'Next month forecast',
+          subtitle: forecastExplanation,
+          color: AppColors.gold,
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -307,18 +351,216 @@ class _ActivityScreenState extends State<ActivityScreen>
                   : AppColors.textPrimary,
             ),
           ),
-
           const SizedBox(height: 16),
-
-          _buildTrendChart(),
-
+          _buildTrendChart(months, monthlyTotals, forecast),
           const SizedBox(height: 24),
-
-          _buildTrendInsights(),
-
+          _buildTrendInsights(insights),
           const SizedBox(height: 100),
         ],
       ),
+    );
+  }
+
+  Widget _buildTrendsFromTransactions() {
+    return StreamBuilder<List<Transaction>>(
+      stream: _unifiedService.getTransactions(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(32.0),
+            child: Center(
+              child: Column(
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading transactions',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final transactions = snapshot.data ?? [];
+        final expenses = transactions
+            .where((tx) => tx.type == TransactionType.expense)
+            .toList();
+
+        if (expenses.isEmpty) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Column(
+                children: [
+                  const Icon(Icons.show_chart, size: 48, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No spending data yet.',
+                    style: AppTextStyles.body2.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final months = _recentMonths(5);
+        final monthlyTotals = <DateTime, double>{
+          for (final m in months) m: 0.0,
+        };
+        final categoryMonthly = <String, List<double>>{};
+
+        for (final tx in expenses) {
+          final key = _monthKey(tx.date);
+          if (!monthlyTotals.containsKey(key)) continue;
+          monthlyTotals[key] = (monthlyTotals[key] ?? 0) + tx.amount;
+
+          categoryMonthly.putIfAbsent(
+            tx.category,
+            () => List<double>.filled(months.length, 0),
+          );
+          final index = months.indexOf(key);
+          if (index >= 0) {
+            categoryMonthly[tx.category]![index] += tx.amount;
+          }
+        }
+
+        final lastThree = months
+            .skip(months.length - 3)
+            .map((m) => monthlyTotals[m] ?? 0)
+            .toList();
+        final forecast = lastThree.isEmpty
+            ? 0.0
+            : lastThree.reduce((a, b) => a + b) / lastThree.length;
+
+        final topCategory = categoryMonthly.entries
+            .fold<MapEntry<String, List<double>>?>(null, (prev, entry) {
+              final avg = entry.value.isEmpty
+                  ? 0.0
+                  : entry.value.reduce((a, b) => a + b) / entry.value.length;
+              final prevAvg = prev == null
+                  ? -1
+                  : prev.value.reduce((a, b) => a + b) / prev.value.length;
+              return avg > prevAvg ? entry : prev;
+            });
+
+        final insights = <_TrendInsight>[];
+        final lastMonth = months.last;
+        final lastMonthSpend = monthlyTotals[lastMonth] ?? 0.0;
+        final priorAvg = months.length > 1
+            ? monthlyTotals.entries
+                      .where((e) => e.key != lastMonth)
+                      .fold<double>(0, (sum, e) => sum + e.value) /
+                  (months.length - 1)
+            : 0.0;
+        if (priorAvg > 0 && lastMonthSpend > priorAvg * 1.3) {
+          insights.add(
+            _TrendInsight(
+              icon: Icons.warning_amber,
+              title: 'Spending spike detected',
+              subtitle:
+                  'Last month spending was ${(lastMonthSpend / priorAvg * 100).toStringAsFixed(0)}% of your recent average.',
+              color: AppColors.warning,
+            ),
+          );
+        }
+
+        if (topCategory != null) {
+          final avg =
+              topCategory.value.reduce((a, b) => a + b) /
+              topCategory.value.length;
+          insights.add(
+            _TrendInsight(
+              icon: Icons.trending_up,
+              title: 'Likely top category next month',
+              subtitle:
+                  '${topCategory.key} is projected at \$${avg.toStringAsFixed(0)}.',
+              color: AppColors.primary,
+            ),
+          );
+        }
+
+        final totalThisMonth = monthlyTotals[lastMonth] ?? 0;
+        if (totalThisMonth > 0) {
+          final topShare = topCategory == null || topCategory.value.isEmpty
+              ? 0.0
+              : (topCategory.value.last / totalThisMonth);
+          if (topShare >= 0.3) {
+            insights.add(
+              _TrendInsight(
+                icon: Icons.notifications_active,
+                title: 'Consider a budget',
+                subtitle:
+                    '${topCategory!.key} is ${((topShare) * 100).toStringAsFixed(0)}% of last month spending.',
+                color: AppColors.error,
+              ),
+            );
+          }
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Spending Trends',
+                style: AppTextStyles.h3.copyWith(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.darkTextPrimary
+                      : AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildTrendChart(months, monthlyTotals, forecast),
+              const SizedBox(height: 24),
+              _buildTrendInsights(insights),
+              const SizedBox(height: 100),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  _TrendInsight _mapAnalyticsInsight(AnalyticsInsight insight) {
+    IconData icon;
+    Color color;
+    switch (insight.type) {
+      case 'spike':
+        icon = Icons.warning_amber;
+        color = AppColors.warning;
+        break;
+      case 'anomaly':
+        icon = Icons.report_problem_outlined;
+        color = AppColors.error;
+        break;
+      case 'top_category':
+        icon = Icons.trending_up;
+        color = AppColors.primary;
+        break;
+      case 'volatility':
+        icon = Icons.show_chart;
+        color = AppColors.gold;
+        break;
+      default:
+        icon = Icons.insights;
+        color = AppColors.primary;
+    }
+
+    return _TrendInsight(
+      icon: icon,
+      title: insight.title,
+      subtitle: insight.detail,
+      color: color,
     );
   }
 
@@ -397,9 +639,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                 final mainAxisSpacing = 16.0;
                 final width =
                     (constraints.maxWidth - crossAxisSpacing) / crossAxisCount;
-                final mainAxisExtent =
-                    width *
-                    1.3; // Increased from 1.2 to 1.3 to prevent overflow
+                final mainAxisExtent = width * 1;
 
                 return GridView.builder(
                   shrinkWrap: true,
@@ -441,11 +681,9 @@ class _ActivityScreenState extends State<ActivityScreen>
                             child: Icon(
                               stat['icon'] as IconData,
                               color: stat['color'] as Color,
-                              size: 16,
+                              size: 18,
                             ),
                           ),
-
-                          const Spacer(),
 
                           Flexible(
                             child: Text(
@@ -490,20 +728,81 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
-  Widget _buildTrendChart() {
+  Widget _buildTrendChart(
+    List<DateTime> months,
+    Map<DateTime, double> monthlyTotals,
+    double forecast,
+  ) {
+    final maxValue = [
+      ...monthlyTotals.values,
+      forecast,
+    ].fold<double>(0, (max, v) => v > max ? v : max);
+
     return Container(
-      height: 200,
+      height: 220,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
-      child: const Center(child: Text('Trend chart would go here')),
+      child: BarChart(
+        BarChartData(
+          gridData: FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index < 0 || index >= months.length + 1) {
+                    return const SizedBox.shrink();
+                  }
+                  if (index == months.length) {
+                    return Text('Next', style: AppTextStyles.caption);
+                  }
+                  final month = DateFormat('MMM').format(months[index]);
+                  return Text(month, style: AppTextStyles.caption);
+                },
+              ),
+            ),
+          ),
+          maxY: maxValue == 0 ? 1 : maxValue * 1.2,
+          barGroups: [
+            for (var i = 0; i < months.length; i++)
+              BarChartGroupData(
+                x: i,
+                barRods: [
+                  BarChartRodData(
+                    toY: monthlyTotals[months[i]] ?? 0,
+                    width: 12,
+                    borderRadius: BorderRadius.circular(6),
+                    color: AppColors.primary,
+                  ),
+                ],
+              ),
+            BarChartGroupData(
+              x: months.length,
+              barRods: [
+                BarChartRodData(
+                  toY: forecast,
+                  width: 12,
+                  borderRadius: BorderRadius.circular(6),
+                  color: AppColors.gold,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildTrendInsights() {
+  Widget _buildTrendInsights(List<_TrendInsight> insights) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -515,35 +814,38 @@ class _ActivityScreenState extends State<ActivityScreen>
                 : AppColors.textPrimary,
           ),
         ),
-
         const SizedBox(height: 16),
-
-        _buildInsightCard(
-          icon: Icons.trending_down,
-          title: 'Spending Decreased',
-          subtitle: 'You spent 15% less this month compared to last month',
-          color: AppColors.income,
-        ),
-
-        const SizedBox(height: 12),
-
-        _buildInsightCard(
-          icon: Icons.category,
-          title: 'Top Category',
-          subtitle: 'Food & Dining accounts for 35% of your spending',
-          color: AppColors.primary,
-        ),
-
-        const SizedBox(height: 12),
-
-        _buildInsightCard(
-          icon: Icons.schedule,
-          title: 'Peak Spending Time',
-          subtitle: 'Most transactions happen between 12-2 PM',
-          color: AppColors.gold,
-        ),
+        if (insights.isEmpty)
+          Text(
+            'No significant trends yet. Keep tracking to build insights.',
+            style: AppTextStyles.body2.copyWith(color: AppColors.textSecondary),
+          )
+        else
+          ...insights.map(
+            (insight) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildInsightCard(
+                icon: insight.icon,
+                title: insight.title,
+                subtitle: insight.subtitle,
+                color: insight.color,
+              ),
+            ),
+          ),
       ],
     );
+  }
+
+  List<DateTime> _recentMonths(int count) {
+    final now = DateTime.now();
+    return List.generate(
+      count,
+      (index) => DateTime(now.year, now.month - (count - 1 - index)),
+    );
+  }
+
+  DateTime _monthKey(DateTime date) {
+    return DateTime(date.year, date.month);
   }
 
   Widget _buildInsightCard({
@@ -601,7 +903,55 @@ class _ActivityScreenState extends State<ActivityScreen>
   }
 
   void _showDetailedAnalytics() {
-    // Show detailed analytics screen
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Detailed Analytics',
+              style: AppTextStyles.h3.copyWith(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'More insights are coming soon.',
+              style: AppTextStyles.body2.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -632,4 +982,18 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
     return false;
   }
+}
+
+class _TrendInsight {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+
+  const _TrendInsight({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+  });
 }

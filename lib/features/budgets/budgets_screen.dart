@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -789,16 +791,318 @@ class _BudgetsScreenState extends State<BudgetsScreen>
   }
 
   void _showBudgetInsights() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Budget Insights'),
-        content: const Text('Budget insights and analytics coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: StreamBuilder<List<Budget>>(
+          stream: _unifiedService.getBudgets(),
+          builder: (context, budgetsSnapshot) {
+            return StreamBuilder<List<Transaction>>(
+              stream: _unifiedService.getTransactions(),
+              builder: (context, transactionsSnapshot) {
+                if (!budgetsSnapshot.hasData ||
+                    !transactionsSnapshot.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                final budgets = budgetsSnapshot.data!;
+                final transactions = transactionsSnapshot.data!;
+                final budgetsWithSpent = budgets.map((budget) {
+                  double spent = 0.0;
+                  final categories =
+                      budget.includedCategories ?? [budget.category];
+
+                  for (final tx in transactions) {
+                    if (tx.type == TransactionType.expense &&
+                        categories.contains(tx.category) &&
+                        tx.date.isAfter(
+                          budget.startDate.subtract(const Duration(seconds: 1)),
+                        ) &&
+                        tx.date.isBefore(
+                          budget.endDate.add(const Duration(days: 1)),
+                        )) {
+                      spent += tx.amount;
+                    }
+                  }
+
+                  return budget.copyWith(spent: spent);
+                }).toList();
+
+                final totalBudget = budgetsWithSpent.fold<double>(
+                  0.0,
+                  (sum, b) => sum + b.limit,
+                );
+                final totalSpent = budgetsWithSpent.fold<double>(
+                  0.0,
+                  (sum, b) => sum + b.spent,
+                );
+                final overBudgets =
+                    budgetsWithSpent.where((b) => b.isOverBudget).toList();
+                final nearBudgets =
+                    budgetsWithSpent.where((b) => b.isNearLimit).toList();
+
+                final projectedRisks = budgetsWithSpent
+                    .map((b) {
+                      final daysTotal =
+                          b.endDate.difference(b.startDate).inDays + 1;
+                      final daysElapsed = DateTime.now()
+                              .difference(b.startDate)
+                              .inDays
+                              .clamp(1, daysTotal);
+                      final daily = b.spent / daysElapsed;
+                      final projected = daily * daysTotal;
+                      return {
+                        'budget': b,
+                        'projected': projected,
+                        'over': projected - b.limit,
+                      };
+                    })
+                    .where((item) => (item['over'] as double) > 0)
+                    .toList()
+                  ..sort(
+                    (a, b) =>
+                        (b['over'] as double).compareTo(a['over'] as double),
+                  );
+
+                final bestBudgets = budgetsWithSpent.toList()
+                  ..sort((a, b) => a.percentage.compareTo(b.percentage));
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Text(
+                        'Budget Insights',
+                        style: AppTextStyles.h3.copyWith(
+                          color:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInsightSummary(totalBudget, totalSpent),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatusPill(
+                              '${overBudgets.length} Over',
+                              AppColors.error,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatusPill(
+                              '${nearBudgets.length} Near Limit',
+                              AppColors.warning,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatusPill(
+                              '${budgetsWithSpent.length} Active',
+                              AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text('Top Risks', style: AppTextStyles.h4),
+                      const SizedBox(height: 12),
+                      if (projectedRisks.isEmpty)
+                        Text(
+                          'No budgets are projected to exceed their limits.',
+                          style: AppTextStyles.body2.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        )
+                      else
+                        ...projectedRisks.take(3).map((item) {
+                          final budget = item['budget'] as Budget;
+                          final over = item['over'] as double;
+                          return _buildInsightCard(
+                            icon: budget.icon,
+                            title: budget.name,
+                            subtitle:
+                                'Projected over by \$${over.toStringAsFixed(0)}',
+                            color: AppColors.error,
+                          );
+                        }),
+                      const SizedBox(height: 24),
+                      Text('Opportunities', style: AppTextStyles.h4),
+                      const SizedBox(height: 12),
+                      if (bestBudgets.isEmpty)
+                        Text(
+                          'Add budgets to get insights.',
+                          style: AppTextStyles.body2.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        )
+                      else
+                        ...bestBudgets.take(3).map((budget) {
+                          return _buildInsightCard(
+                            icon: budget.icon,
+                            title: budget.name,
+                            subtitle:
+                                '${budget.formattedPercentage} used so far',
+                            color: AppColors.income,
+                          );
+                        }),
+                      const SizedBox(height: 24),
+                      Text('Suggestions', style: AppTextStyles.h4),
+                      const SizedBox(height: 12),
+                      _buildSuggestion(
+                        totalSpent > totalBudget && totalBudget > 0
+                            ? 'Total spending is above your budgets. Consider increasing limits or reducing discretionary categories.'
+                            : 'Your spending is within budget. Keep tracking weekly to stay on course.',
+                      ),
+                      _buildSuggestion(
+                        overBudgets.isNotEmpty
+                            ? 'Focus on the top over-budget category and set a stricter limit next period.'
+                            : 'Set alerts on categories that tend to spike to avoid surprises.',
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsightSummary(double totalBudget, double totalSpent) {
+    final formatter = totalBudget == 0 ? '—' : '\$${totalSpent.toStringAsFixed(0)}';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.insights, color: AppColors.primary),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Total Spent', style: AppTextStyles.subtitle2),
+                Text(
+                  formatter,
+                  style: AppTextStyles.h4.copyWith(color: AppColors.primary),
+                ),
+                Text(
+                  totalBudget == 0
+                      ? 'No budgets configured'
+                      : 'Budgeted: \$${totalBudget.toStringAsFixed(0)}',
+                  style: AppTextStyles.caption,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: AppTextStyles.subtitle2.copyWith(color: color),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsightCard({
+    required String icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.subtitle1),
+                const SizedBox(height: 4),
+                Text(subtitle, style: AppTextStyles.body2),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestion(String text) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lightbulb_outline, color: AppColors.gold, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: AppTextStyles.body2)),
         ],
       ),
     );

@@ -77,10 +77,12 @@ class _WalletsOverviewState extends State<WalletsOverview> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${widget.walletCount} WALLETS',
+                      '${widget.walletCount} '
+                      '${Intl.plural(widget.walletCount, one: 'WALLET', other: 'WALLETS')}',
                       style: AppTextStyles.caption.copyWith(
                         color: isDark ? AppColors.gold : AppColors.primary,
                         fontWeight: FontWeight.w600,
+                        fontSize: 10,
                       ),
                     ),
                   ),
