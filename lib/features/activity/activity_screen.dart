@@ -79,6 +79,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                 actions: [
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.date_range),
+                    initialValue: _selectedPeriod,
                     onSelected: (period) {
                       setState(() {
                         _selectedPeriod = period;

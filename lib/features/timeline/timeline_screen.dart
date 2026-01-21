@@ -1141,7 +1141,10 @@ class _TimelineScreenState extends State<TimelineScreen>
                   // Delete button
                   ElevatedButton(
                     onPressed: () {
-                      _deleteTransactionFromDetails(transaction, context);
+                      _deleteTransaction(
+                        transaction,
+                        bottomSheetContext: context,
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.error,
@@ -1187,17 +1190,20 @@ class _TimelineScreenState extends State<TimelineScreen>
     );
   }
 
-  void _deleteTransaction(Transaction transaction) {
+  void _deleteTransaction(
+    Transaction transaction, {
+    BuildContext? bottomSheetContext,
+  }) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Transaction'),
         content: Text(
           'Are you sure you want to delete "${transaction.description}"?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -1206,7 +1212,13 @@ class _TimelineScreenState extends State<TimelineScreen>
                   .deleteTransaction(transaction.id)
                   .then((_) {
                     if (mounted) {
-                      Navigator.pop(context); // Close dialog
+                      Navigator.of(dialogContext).pop(); // Close dialog
+                      if (bottomSheetContext != null) {
+                        final navigator = Navigator.of(bottomSheetContext);
+                        if (navigator.canPop()) {
+                          navigator.pop();
+                        }
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Transaction deleted'),
@@ -1217,7 +1229,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                   })
                   .catchError((error) {
                     if (mounted) {
-                      Navigator.pop(context); // Close dialog
+                      Navigator.of(dialogContext).pop(); // Close dialog
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error: ${error.toString()}'),
@@ -1226,58 +1238,6 @@ class _TimelineScreenState extends State<TimelineScreen>
                       );
                     }
                   });
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteTransactionFromDetails(
-    Transaction transaction,
-    BuildContext bottomSheetContext,
-  ) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Transaction'),
-        content: Text(
-          'Are you sure you want to delete "${transaction.description}"?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).maybePop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await Navigator.of(
-                dialogContext,
-              ).maybePop(); // Close dialog first
-              await Navigator.of(
-                bottomSheetContext,
-              ).maybePop(); // Close bottom sheet if present
-
-              try {
-                await _unifiedService.deleteTransaction(transaction.id);
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Transaction deleted'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              } catch (error) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${error.toString()}'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),

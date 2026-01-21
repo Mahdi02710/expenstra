@@ -90,7 +90,6 @@ class SpendingChart extends StatelessWidget {
 
     return entries.asMap().entries.map((entry) {
       final index = entry.key;
-      final label = entry.value.key;
       final amount = entry.value.value;
       final percentage = (amount / total) * 100;
 
