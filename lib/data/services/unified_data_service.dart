@@ -120,6 +120,10 @@ class UnifiedDataService {
     if (wallets.isEmpty) return;
 
     final now = DateTime.now();
+    // Only roll over at the start of a new month.
+    if (now.day != 1) {
+      return;
+    }
     for (final wallet in wallets) {
       if (!wallet.isMonthlyRollover) {
         continue;
@@ -219,7 +223,7 @@ class UnifiedDataService {
       while (!nextRun.isAfter(now) && guard < 36) {
         final tx = Transaction(
           id: (DateTime.now().microsecondsSinceEpoch + guard).toString(),
-          type: TransactionType.expense,
+          type: payment.type,
           amount: payment.amount,
           description: payment.name,
           category: payment.category,

@@ -680,30 +680,28 @@ class _WalletsScreenState extends State<WalletsScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => WalletForm(initialType: walletType),
-    ).then((result) {
-      if (result != null && result is Wallet) {
-        _unifiedService
-            .addWallet(result)
-            .then((_) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Wallet added successfully'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              }
-            })
-            .catchError((error) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${error.toString()}'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            });
+    ).then((result) async {
+      if (result == null || result is! WalletFormResult) return;
+      try {
+        await _unifiedService.addWallet(result.wallet);
+        await _applyRecurringPaymentChanges(result);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Wallet added successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${error.toString()}'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     });
   }
@@ -720,32 +718,49 @@ class _WalletsScreenState extends State<WalletsScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => WalletForm(wallet: wallet),
-    ).then((result) {
-      if (result != null && result is Wallet) {
-        _unifiedService
-            .updateWallet(result)
-            .then((_) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Wallet updated successfully'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              }
-            })
-            .catchError((error) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${error.toString()}'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            });
+    ).then((result) async {
+      if (result == null || result is! WalletFormResult) return;
+      try {
+        await _unifiedService.updateWallet(result.wallet);
+        await _applyRecurringPaymentChanges(result);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Wallet updated successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${error.toString()}'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     });
+  }
+
+  Future<void> _applyRecurringPaymentChanges(
+    WalletFormResult result,
+  ) async {
+    if (result.recurringPaymentIdToDelete != null) {
+      await _unifiedService.deleteRecurringPayment(
+        result.recurringPaymentIdToDelete!,
+      );
+    }
+    if (result.recurringPayment != null) {
+      if (result.recurringPaymentExists) {
+        await _unifiedService.updateRecurringPayment(
+          result.recurringPayment!,
+        );
+      } else {
+        await _unifiedService.addRecurringPayment(result.recurringPayment!);
+      }
+    }
   }
 
   void _deleteWallet(
@@ -879,88 +894,95 @@ class _WalletsScreenState extends State<WalletsScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) {
-          return Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+          return SafeArea(
+            top: false,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
               ),
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Text(
-                  'Sort Wallets',
-                  style: AppTextStyles.h3.copyWith(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ...WalletSortOption.values.map(
-                  (option) => RadioListTile<WalletSortOption>(
-                    title: Text(_sortLabel(option)),
-                    value: option,
-                    groupValue: tempOption,
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setSheetState(() => tempOption = value);
-                    },
-                  ),
-                ),
-                SwitchListTile(
-                  title: const Text('Ascending'),
-                  value: tempAscending,
-                  onChanged: (value) =>
-                      setSheetState(() => tempAscending = value),
-                ),
-                const SizedBox(height: 8),
-                Row(
+              padding: const EdgeInsets.all(24),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setSheetState(() {
-                            tempOption = WalletSortOption.name;
-                            tempAscending = true;
-                          });
-                        },
-                        child: const Text('Reset'),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _sortOption = tempOption;
-                            _sortAscending = tempAscending;
-                          });
-                          final navigator = Navigator.of(context);
-                          if (navigator.canPop()) {
-                            navigator.pop();
-                          }
-                        },
-                        child: const Text('Apply'),
+                    Text(
+                      'Sort Wallets',
+                      style: AppTextStyles.h3.copyWith(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    ...WalletSortOption.values.map(
+                      (option) => RadioListTile<WalletSortOption>(
+                        title: Text(_sortLabel(option)),
+                        value: option,
+                        groupValue: tempOption,
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setSheetState(() => tempOption = value);
+                        },
+                      ),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Ascending'),
+                      value: tempAscending,
+                      onChanged: (value) =>
+                          setSheetState(() => tempAscending = value),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setSheetState(() {
+                                tempOption = WalletSortOption.name;
+                                tempAscending = true;
+                              });
+                            },
+                            child: const Text('Reset'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _sortOption = tempOption;
+                                _sortAscending = tempAscending;
+                              });
+                              final navigator = Navigator.of(context);
+                              if (navigator.canPop()) {
+                                navigator.pop();
+                              }
+                            },
+                            child: const Text('Apply'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: MediaQuery.of(context).padding.bottom),
                   ],
                 ),
-              ],
+              ),
             ),
           );
         },

@@ -14,7 +14,7 @@ class LocalDatabaseService {
 
   static Database? _database;
   static const String _dbName = 'expensetra.db';
-  static const int _dbVersion = 5;
+  static const int _dbVersion = 6;
   Future<void> _operationQueue = Future.value();
 
   // Table names
@@ -147,6 +147,7 @@ class LocalDatabaseService {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         amount REAL NOT NULL,
+        type TEXT NOT NULL DEFAULT 'expense',
         category TEXT NOT NULL,
         icon TEXT NOT NULL,
         walletId TEXT NOT NULL,
@@ -216,6 +217,7 @@ class LocalDatabaseService {
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             amount REAL NOT NULL,
+            type TEXT NOT NULL DEFAULT 'expense',
             category TEXT NOT NULL,
             icon TEXT NOT NULL,
             walletId TEXT NOT NULL,
@@ -239,6 +241,7 @@ class LocalDatabaseService {
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             amount REAL NOT NULL,
+            type TEXT NOT NULL DEFAULT 'expense',
             category TEXT NOT NULL,
             icon TEXT NOT NULL,
             walletId TEXT NOT NULL,
@@ -254,6 +257,11 @@ class LocalDatabaseService {
         ''');
         await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_recurring_next_run ON $_recurringPaymentsTable(nextRunAt)',
+        );
+      }
+      if (oldVersion < 6) {
+        await db.execute(
+          'ALTER TABLE $_recurringPaymentsTable ADD COLUMN type TEXT NOT NULL DEFAULT "expense"',
         );
       }
     }
@@ -429,7 +437,7 @@ class LocalDatabaseService {
         'id': wallet.id,
         'name': wallet.name,
         'balance': wallet.balance,
-        'type': wallet.type.toString(),
+        'type': wallet.type.name,
         'icon': wallet.icon,
         'color': wallet.color,
         'accountNumber': wallet.accountNumber,
@@ -501,7 +509,7 @@ class LocalDatabaseService {
         {
           'name': wallet.name,
           'balance': wallet.balance,
-          'type': wallet.type.toString(),
+          'type': wallet.type.name,
           'icon': wallet.icon,
           'color': wallet.color,
           'accountNumber': wallet.accountNumber,

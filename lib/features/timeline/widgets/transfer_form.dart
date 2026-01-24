@@ -38,13 +38,19 @@ class _TransferFormState extends State<TransferForm> {
       stream: _unifiedService.getWallets(),
       builder: (context, snapshot) {
         final wallets = snapshot.data ?? [];
-        if (_fromWalletId == null && wallets.isNotEmpty) {
+        final activeWallets =
+            wallets.where((wallet) => wallet.isActive).toList();
+        if (activeWallets.isNotEmpty &&
+            (_fromWalletId == null ||
+                !activeWallets.any((wallet) => wallet.id == _fromWalletId))) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             setState(() {
-              _fromWalletId = wallets.first.id;
-              if (wallets.length > 1) {
-                _toWalletId = wallets[1].id;
+              _fromWalletId = activeWallets.first.id;
+              if (activeWallets.length > 1) {
+                _toWalletId = activeWallets[1].id;
+              } else {
+                _toWalletId = null;
               }
             });
           });
@@ -113,7 +119,7 @@ class _TransferFormState extends State<TransferForm> {
                           onSelected: (id) =>
                               setState(() => _fromWalletId = id),
                           excludeWalletId: _toWalletId,
-                          wallets: wallets,
+                          wallets: activeWallets,
                         ),
 
                         const SizedBox(height: 24),
@@ -141,7 +147,7 @@ class _TransferFormState extends State<TransferForm> {
                           selectedWalletId: _toWalletId,
                           onSelected: (id) => setState(() => _toWalletId = id),
                           excludeWalletId: _fromWalletId,
-                          wallets: wallets,
+                          wallets: activeWallets,
                         ),
 
                         const SizedBox(height: 24),
@@ -191,7 +197,7 @@ class _TransferFormState extends State<TransferForm> {
                             }
                             if (_fromWalletId != null) {
                               final fromWallet = _findWallet(
-                                wallets,
+                                activeWallets,
                                 _fromWalletId!,
                               );
                               if (fromWallet != null &&
@@ -361,53 +367,62 @@ class _TransferFormState extends State<TransferForm> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Select $label Wallet',
-                style: AppTextStyles.h4.copyWith(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.darkTextPrimary
-                      : AppColors.textPrimary,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        top: false,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Select $label Wallet',
+                  style: AppTextStyles.h4.copyWith(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
                 ),
               ),
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              itemCount: filteredWallets.length,
-              itemBuilder: (context, index) {
-                final wallet = filteredWallets[index];
-                final isSelected =
-                    wallet.id ==
-                    (label == 'From' ? _fromWalletId : _toWalletId);
+              Flexible(
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  itemCount: filteredWallets.length,
+                  itemBuilder: (context, index) {
+                    final wallet = filteredWallets[index];
+                    final isSelected =
+                        wallet.id ==
+                        (label == 'From' ? _fromWalletId : _toWalletId);
 
-                return ListTile(
-                  leading: Text(
-                    wallet.icon,
-                    style: const TextStyle(fontSize: 32),
-                  ),
-                  title: Text(wallet.name),
-                  subtitle: Text(wallet.formattedBalance),
-                  trailing: isSelected
-                      ? Icon(Icons.check, color: AppColors.primary)
-                      : null,
-                  onTap: () {
-                    onSelected(wallet.id);
-                    Navigator.pop(context);
+                    return ListTile(
+                      leading: Text(
+                        wallet.icon,
+                        style: const TextStyle(fontSize: 32),
+                      ),
+                      title: Text(wallet.name),
+                      subtitle: Text(wallet.formattedBalance),
+                      trailing: isSelected
+                          ? Icon(Icons.check, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        onSelected(wallet.id);
+                        Navigator.pop(context);
+                      },
+                    );
                   },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
+                ),
+              ),
+              SizedBox(height: 8 + MediaQuery.of(context).padding.bottom),
+            ],
+          ),
         ),
       ),
     );
