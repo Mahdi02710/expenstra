@@ -9,6 +9,7 @@ import '../../../data/models/wallet.dart';
 import '../../../data/services/category_service.dart';
 import '../../../data/services/settings_service.dart';
 import '../../../data/services/unified_data_service.dart';
+import '../../../shared/utils/app_snackbar.dart';
 
 class TransactionForm extends StatefulWidget {
   final TransactionType? initialType;
@@ -153,12 +154,15 @@ class _TransactionFormState extends State<TransactionForm> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 15),
 
             // Form fields
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 4,
+                  horizontal: 24,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -374,17 +378,20 @@ class _TransactionFormState extends State<TransactionForm> {
                     StreamBuilder<List<Wallet>>(
                       stream: _unifiedService.getWallets(),
                       builder: (context, snapshot) {
-                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                        final activeWallets = (snapshot.data ?? [])
+                            .where((wallet) => wallet.isActive)
+                            .toList();
+                        if (activeWallets.isNotEmpty) {
                           if (_selectedWalletId.isEmpty) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               if (mounted) {
                                 setState(() {
-                                  _selectedWalletId = snapshot.data!.first.id;
+                                  _selectedWalletId = activeWallets.first.id;
                                 });
                               }
                             });
                           }
-                          return _buildWalletSelector(snapshot.data!);
+                          return _buildWalletSelector(activeWallets);
                         }
                         return _buildWalletSelector([]);
                       },
@@ -555,7 +562,9 @@ class _TransactionFormState extends State<TransactionForm> {
             StreamBuilder<List<Wallet>>(
               stream: _unifiedService.getWallets(),
               builder: (context, snapshot) {
-                final wallets = snapshot.data ?? [];
+                final wallets = (snapshot.data ?? [])
+                    .where((w) => w.isActive)
+                    .toList();
                 final selectedWallet = _getSelectedWallet(wallets);
                 return Text(
                   selectedWallet?.icon ?? '💰',
@@ -568,7 +577,9 @@ class _TransactionFormState extends State<TransactionForm> {
               child: StreamBuilder<List<Wallet>>(
                 stream: _unifiedService.getWallets(),
                 builder: (context, snapshot) {
-                  final wallets = snapshot.data ?? [];
+                  final wallets = (snapshot.data ?? [])
+                      .where((w) => w.isActive)
+                      .toList();
                   final selectedWallet = _getSelectedWallet(wallets);
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -757,65 +768,75 @@ class _TransactionFormState extends State<TransactionForm> {
       builder: (context) => StreamBuilder<List<Wallet>>(
         stream: _unifiedService.getWallets(),
         builder: (context, snapshot) {
-          final wallets = snapshot.data ?? [];
+          final wallets = (snapshot.data ?? [])
+              .where((w) => w.isActive)
+              .toList();
 
-          return Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+          return SafeArea(
+            top: false,
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Select Wallet',
-                    style: AppTextStyles.h4.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
-                    ),
-                  ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
-                if (wallets.isEmpty)
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Padding(
-                    padding: const EdgeInsets.all(32),
+                    padding: const EdgeInsets.all(16),
                     child: Text(
-                      'No wallets available. Please add a wallet first.',
-                      style: AppTextStyles.body2,
-                      textAlign: TextAlign.center,
+                      'Select Wallet',
+                      style: AppTextStyles.h4.copyWith(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
+                      ),
                     ),
-                  )
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: wallets.length,
-                    itemBuilder: (context, index) {
-                      final wallet = wallets[index];
-                      final isSelected = wallet.id == _selectedWalletId;
-
-                      return ListTile(
-                        leading: Text(
-                          wallet.icon,
-                          style: const TextStyle(fontSize: 32),
-                        ),
-                        title: Text(wallet.name),
-                        subtitle: Text(wallet.formattedBalance),
-                        trailing: isSelected
-                            ? Icon(Icons.check, color: AppColors.primary)
-                            : null,
-                        onTap: () {
-                          setState(() => _selectedWalletId = wallet.id);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
                   ),
-                const SizedBox(height: 16),
-              ],
+                  if (wallets.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        'No wallets available. Please add a wallet first.',
+                        style: AppTextStyles.body2,
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        itemCount: wallets.length,
+                        itemBuilder: (context, index) {
+                          final wallet = wallets[index];
+                          final isSelected = wallet.id == _selectedWalletId;
+
+                          return ListTile(
+                            leading: Text(
+                              wallet.icon,
+                              style: const TextStyle(fontSize: 32),
+                            ),
+                            title: Text(wallet.name),
+                            subtitle: Text(wallet.formattedBalance),
+                            trailing: isSelected
+                                ? Icon(Icons.check, color: AppColors.primary)
+                                : null,
+                            onTap: () {
+                              setState(() => _selectedWalletId = wallet.id);
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  SizedBox(height: 8 + MediaQuery.of(context).padding.bottom),
+                ],
+              ),
             ),
           );
         },
@@ -939,9 +960,11 @@ class _TransactionFormState extends State<TransactionForm> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedWalletId.isEmpty) {
-      ScaffoldMessenger.of(
+      showAppSnackBar(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a wallet')));
+        'Please select a wallet',
+        backgroundColor: AppColors.warning,
+      );
       return;
     }
 

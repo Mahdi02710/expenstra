@@ -11,6 +11,7 @@ import 'package:expensetra/data/services/session_service.dart';
 import 'package:expensetra/data/services/sync_service.dart';
 import 'package:expensetra/data/services/category_service.dart';
 import 'package:expensetra/login_page/login_page.dart';
+import 'package:expensetra/shared/utils/app_snackbar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -139,20 +140,18 @@ class _MoreScreenState extends State<MoreScreen>
       try {
         await _authService.signOut();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Signed out successfully'),
-              backgroundColor: AppColors.success,
-            ),
+          showAppSnackBar(
+            context,
+            'Signed out successfully',
+            backgroundColor: AppColors.success,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error signing out: ${e.toString()}'),
-              backgroundColor: AppColors.error,
-            ),
+          showAppSnackBar(
+            context,
+            'Error signing out: ${e.toString()}',
+            backgroundColor: AppColors.error,
           );
         }
       }
@@ -1093,11 +1092,10 @@ class _MoreScreenState extends State<MoreScreen>
                   await _settingsService.setPasscode(null);
                   if (!mounted) return;
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Passcode removed'),
-                      backgroundColor: AppColors.success,
-                    ),
+                  showAppSnackBar(
+                    context,
+                    'Passcode removed',
+                    backgroundColor: AppColors.success,
                   );
                 },
                 child: const Text('Remove Passcode'),
@@ -1287,11 +1285,10 @@ class _MoreScreenState extends State<MoreScreen>
                     await _settingsService.setLbpRate(rate);
                     if (!mounted) return;
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Currency settings saved'),
-                        backgroundColor: AppColors.success,
-                      ),
+                    showAppSnackBar(
+                      context,
+                      'Currency settings saved',
+                      backgroundColor: AppColors.success,
                     );
                   },
                   child: const Text('Save'),
@@ -1350,11 +1347,10 @@ class _MoreScreenState extends State<MoreScreen>
                 await _syncService.syncAll();
                 if (!mounted) return;
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Sync completed'),
-                    backgroundColor: AppColors.success,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Sync completed',
+                  backgroundColor: AppColors.success,
                 );
               },
               icon: const Icon(Icons.cloud_sync),
@@ -1491,11 +1487,10 @@ class _MoreScreenState extends State<MoreScreen>
               );
               if (!mounted) return;
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Category added'),
-                  backgroundColor: AppColors.success,
-                ),
+              showAppSnackBar(
+                context,
+                'Category added',
+                backgroundColor: AppColors.success,
               );
             },
             child: const Text('Add'),
@@ -1858,20 +1853,18 @@ class _MoreScreenState extends State<MoreScreen>
                         amountController.text.trim(),
                       );
                       if (amount == null || amount <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Enter a valid amount'),
-                            backgroundColor: AppColors.error,
-                          ),
+                        showAppSnackBar(
+                          context,
+                          'Enter a valid amount',
+                          backgroundColor: AppColors.error,
                         );
                         return;
                       }
                       if (selectedWalletId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Select a wallet'),
-                            backgroundColor: AppColors.error,
-                          ),
+                        showAppSnackBar(
+                          context,
+                          'Select a wallet',
+                          backgroundColor: AppColors.error,
                         );
                         return;
                       }
@@ -1896,11 +1889,10 @@ class _MoreScreenState extends State<MoreScreen>
                       await _unifiedService.addRecurringPayment(payment);
                       if (!mounted) return;
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Reccuring payment added'),
-                          backgroundColor: AppColors.success,
-                        ),
+                      showAppSnackBar(
+                        context,
+                        'Reccuring payment added',
+                        backgroundColor: AppColors.success,
                       );
                     },
                     child: const Text('Save'),
@@ -1954,11 +1946,10 @@ class _MoreScreenState extends State<MoreScreen>
               await _settingsService.setPasscode(code);
               if (!mounted) return;
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Passcode saved'),
-                  backgroundColor: AppColors.success,
-                ),
+              showAppSnackBar(
+                context,
+                'Passcode saved',
+                backgroundColor: AppColors.success,
               );
             },
             child: const Text('Save'),
@@ -1989,11 +1980,10 @@ class _MoreScreenState extends State<MoreScreen>
               await user.updateDisplayName(name.isEmpty ? null : name);
               if (!mounted) return;
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Profile updated'),
-                  backgroundColor: AppColors.success,
-                ),
+              showAppSnackBar(
+                context,
+                'Profile updated',
+                backgroundColor: AppColors.success,
               );
               setState(() {});
             },
@@ -2029,11 +2019,10 @@ class _MoreScreenState extends State<MoreScreen>
         _settingsService.setThemeMode(mode);
         setState(() => _currentThemeMode = mode);
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Theme updated'),
-            backgroundColor: AppColors.success,
-          ),
+        showAppSnackBar(
+          context,
+          'Theme updated',
+          backgroundColor: AppColors.success,
         );
       },
     );

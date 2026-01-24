@@ -24,9 +24,13 @@ class FirestoreService {
         .map((snapshot) {
           try {
             return snapshot.docs
-                .map((doc) {
+              .map((doc) {
                   try {
-                    return model.Transaction.fromMap(doc.data(), doc.id);
+                    final data = doc.data();
+                    final dataId = data['id'];
+                    final resolvedId =
+                        dataId is String && dataId.isNotEmpty ? dataId : doc.id;
+                    return model.Transaction.fromMap(data, resolvedId);
                   } catch (e) {
                     print('Error parsing transaction ${doc.id}: $e');
                     return null;
@@ -51,7 +55,8 @@ class FirestoreService {
         .collection('users')
         .doc(_userId)
         .collection('transactions')
-        .add(transaction.toMap());
+        .doc(transaction.id)
+        .set(transaction.toMap());
   }
 
   Future<void> deleteTransaction(String transactionId) async {

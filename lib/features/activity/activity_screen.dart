@@ -739,6 +739,11 @@ class _ActivityScreenState extends State<ActivityScreen>
       forecast,
     ].fold<double>(0, (max, v) => v > max ? v : max);
 
+    final currencyFormatter = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 2,
+    );
+
     return Container(
       height: 220,
       padding: const EdgeInsets.all(16),
@@ -749,6 +754,20 @@ class _ActivityScreenState extends State<ActivityScreen>
       ),
       child: BarChart(
         BarChartData(
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                final value = currencyFormatter.format(rod.toY);
+                return BarTooltipItem(
+                  value,
+                  AppTextStyles.caption.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
+            ),
+          ),
           gridData: FlGridData(show: false),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
@@ -907,51 +926,437 @@ class _ActivityScreenState extends State<ActivityScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(
-              'Detailed Analytics',
-              style: AppTextStyles.h3.copyWith(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'More insights are coming soon.',
-              style: AppTextStyles.body2.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ),
-          ],
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        top: false,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: StreamBuilder<List<Transaction>>(
+            stream: _unifiedService.getTransactions(),
+            builder: (context, snapshot) {
+              final transactions = snapshot.data ?? [];
+              final periodTransactions = _filterByPeriod(transactions);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Text(
+                    'Detailed Analytics',
+                    style: AppTextStyles.h3.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _selectedPeriod,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildIncomeExpenseChart(periodTransactions),
+                          const SizedBox(height: 24),
+                          _buildTopCategoriesCard(periodTransactions),
+                          const SizedBox(height: 24),
+                          _buildCategoryTrendChart(periodTransactions),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
+    );
+  }
+
+  List<Transaction> _filterByPeriod(List<Transaction> transactions) {
+    final range = _periodRange(_selectedPeriod);
+    return transactions.where((tx) {
+      return tx.date.isAfter(
+            range.start.subtract(const Duration(seconds: 1)),
+          ) &&
+          tx.date.isBefore(range.end.add(const Duration(seconds: 1)));
+    }).toList();
+  }
+
+  DateTimeRange _periodRange(String label) {
+    final now = DateTime.now();
+    switch (label) {
+      case 'This Week':
+        final start = now.subtract(Duration(days: now.weekday - 1));
+        return DateTimeRange(
+          start: DateTime(start.year, start.month, start.day),
+          end: now,
+        );
+      case 'Last 3 Months':
+        final start = DateTime(now.year, now.month - 2, 1);
+        return DateTimeRange(start: start, end: now);
+      case 'This Year':
+        return DateTimeRange(start: DateTime(now.year, 1, 1), end: now);
+      case 'This Month':
+      default:
+        return DateTimeRange(start: DateTime(now.year, now.month, 1), end: now);
+    }
+  }
+
+  Widget _buildIncomeExpenseChart(List<Transaction> transactions) {
+    double income = 0;
+    double expenses = 0;
+    for (final tx in transactions) {
+      if (tx.type == TransactionType.income) {
+        income += tx.amount;
+      } else {
+        expenses += tx.amount;
+      }
+    }
+
+    final maxValue = [
+      income,
+      expenses,
+    ].fold<double>(0, (max, value) => value > max ? value : max);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Income vs Expenses',
+          style: AppTextStyles.h4.copyWith(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.darkTextPrimary
+                : AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 220,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: BarChart(
+            BarChartData(
+              gridData: FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      switch (value.toInt()) {
+                        case 0:
+                          return Text('Income', style: AppTextStyles.caption);
+                        case 1:
+                          return Text('Expense', style: AppTextStyles.caption);
+                        default:
+                          return const SizedBox.shrink();
+                      }
+                    },
+                  ),
+                ),
+              ),
+              maxY: maxValue == 0 ? 1 : maxValue * 1.2,
+              barGroups: [
+                BarChartGroupData(
+                  x: 0,
+                  barRods: [
+                    BarChartRodData(
+                      toY: income,
+                      width: 22,
+                      borderRadius: BorderRadius.circular(6),
+                      color: AppColors.income,
+                    ),
+                  ],
+                ),
+                BarChartGroupData(
+                  x: 1,
+                  barRods: [
+                    BarChartRodData(
+                      toY: expenses,
+                      width: 22,
+                      borderRadius: BorderRadius.circular(6),
+                      color: AppColors.expense,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTopCategoriesCard(List<Transaction> transactions) {
+    final spending = <String, double>{};
+    for (final tx in transactions) {
+      if (tx.type != TransactionType.expense) continue;
+      spending[tx.category] = (spending[tx.category] ?? 0) + tx.amount;
+    }
+
+    final entries = spending.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top = entries.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Top Spending Categories',
+          style: AppTextStyles.h4.copyWith(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.darkTextPrimary
+                : AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (top.isEmpty)
+          Text(
+            'No expense data in this period.',
+            style: AppTextStyles.body2.copyWith(color: AppColors.textSecondary),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            child: Column(
+              children: top.asMap().entries.map((entry) {
+                final index = entry.key;
+                final category = entry.value.key;
+                final amount = entry.value.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: AppColors.getChartColor(index),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          category,
+                          style: AppTextStyles.body2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '\$${amount.toStringAsFixed(0)}',
+                        style: AppTextStyles.subtitle2.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryTrendChart(List<Transaction> transactions) {
+    final now = DateTime.now();
+    final months = List.generate(
+      6,
+      (index) => DateTime(now.year, now.month - (5 - index)),
+    );
+
+    final expenseTransactions = transactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .toList();
+    if (expenseTransactions.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Category Trends',
+            style: AppTextStyles.h4.copyWith(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.darkTextPrimary
+                  : AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No expense data for trends.',
+            style: AppTextStyles.body2.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      );
+    }
+
+    final totalsByCategory = <String, double>{};
+    for (final tx in expenseTransactions) {
+      totalsByCategory[tx.category] =
+          (totalsByCategory[tx.category] ?? 0) + tx.amount;
+    }
+    final topCategories = totalsByCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final trackedCategories = topCategories
+        .take(3)
+        .map((entry) => entry.key)
+        .toList();
+
+    final series = <String, List<double>>{};
+    for (final category in trackedCategories) {
+      series[category] = List<double>.filled(months.length, 0);
+    }
+
+    for (final tx in expenseTransactions) {
+      final key = DateTime(tx.date.year, tx.date.month);
+      final monthIndex = months.indexOf(key);
+      if (monthIndex < 0) continue;
+      if (!series.containsKey(tx.category)) continue;
+      series[tx.category]![monthIndex] += tx.amount;
+    }
+
+    final allValues = series.values.expand((values) => values).toList();
+    final maxValue = allValues.fold<double>(
+      0,
+      (max, value) => value > max ? value : max,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Category Trends',
+          style: AppTextStyles.h4.copyWith(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.darkTextPrimary
+                : AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 240,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: 1,
+                    getTitlesWidget: (value, meta) {
+                      final index = value.toInt();
+                      if (index < 0 || index >= months.length) {
+                        return const SizedBox.shrink();
+                      }
+                      return Text(
+                        DateFormat('MMM').format(months[index]),
+                        style: AppTextStyles.caption,
+                      );
+                    },
+                  ),
+                ),
+              ),
+              minY: 0,
+              maxY: maxValue == 0 ? 1 : maxValue * 1.2,
+              lineBarsData: trackedCategories.asMap().entries.map((entry) {
+                final index = entry.key;
+                final category = entry.value;
+                final values = series[category] ?? [];
+                return LineChartBarData(
+                  isCurved: true,
+                  barWidth: 3,
+                  color: AppColors.getChartColor(index),
+                  dotData: FlDotData(show: false),
+                  spots: values.asMap().entries.map((point) {
+                    return FlSpot(point.key.toDouble(), point.value);
+                  }).toList(),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: trackedCategories.asMap().entries.map((entry) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: AppColors.getChartColor(entry.key),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(entry.value, style: AppTextStyles.caption),
+              ],
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

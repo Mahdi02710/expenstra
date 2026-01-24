@@ -5,7 +5,7 @@ import '../../../data/models/budget.dart';
 
 class BudgetList extends StatelessWidget {
   final List<Budget> budgets;
-  final Function(String) onBudgetTap;
+  final ValueChanged<Budget> onBudgetTap;
 
   const BudgetList({
     super.key,
@@ -26,7 +26,7 @@ class BudgetList extends StatelessWidget {
             .map(
               (budget) => BudgetCard(
                 budget: budget,
-                onTap: () => onBudgetTap(budget.id),
+                onTap: () => onBudgetTap(budget),
               ),
             )
             .toList(),

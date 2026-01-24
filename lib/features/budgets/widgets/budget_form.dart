@@ -6,8 +6,9 @@ import '../../../data/models/budget.dart';
 
 class BudgetForm extends StatefulWidget {
   final Budget? budget;
+  final bool isTemplate;
 
-  const BudgetForm({super.key, this.budget});
+  const BudgetForm({super.key, this.budget, this.isTemplate = false});
 
   @override
   State<BudgetForm> createState() => _BudgetFormState();
@@ -90,6 +91,7 @@ class _BudgetFormState extends State<BudgetForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.budget != null && !widget.isTemplate;
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -119,7 +121,7 @@ class _BudgetFormState extends State<BudgetForm> {
                 ),
 
                 Text(
-                  widget.budget == null ? 'Create New Budget' : 'Edit Budget',
+                  isEditing ? 'Edit Budget' : 'Create New Budget',
                   style: AppTextStyles.h2.copyWith(
                     color: Theme.of(context).brightness == Brightness.dark
                         ? AppColors.darkTextPrimary
@@ -552,10 +554,13 @@ class _BudgetFormState extends State<BudgetForm> {
         ? double.tryParse(_alertThresholdController.text) ?? 0.8
         : 0.8;
 
+    final isEditing = widget.budget != null && !widget.isTemplate;
     final budget = Budget(
-      id: widget.budget?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: isEditing
+          ? widget.budget!.id
+          : DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text.trim(),
-      spent: widget.budget?.spent ?? 0.0,
+      spent: isEditing ? widget.budget!.spent : 0.0,
       limit: limit,
       icon: _selectedIcon,
       color: _selectedColor,
@@ -563,7 +568,7 @@ class _BudgetFormState extends State<BudgetForm> {
       category: _selectedCategory,
       startDate: _startDate,
       endDate: _endDate,
-      isActive: widget.budget?.isActive ?? true,
+      isActive: isEditing ? widget.budget!.isActive : true,
       alertThreshold: alertThreshold / 100, // Convert percentage to decimal
       includedCategories: [_selectedCategory],
     );

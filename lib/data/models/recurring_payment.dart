@@ -1,3 +1,5 @@
+import 'transaction.dart';
+
 enum RecurrencePeriod {
   daily,
   weekly,
@@ -9,6 +11,7 @@ class RecurringPayment {
   final String id;
   final String name;
   final double amount;
+  final TransactionType type;
   final String category;
   final String icon;
   final String walletId;
@@ -23,6 +26,7 @@ class RecurringPayment {
     required this.id,
     required this.name,
     required this.amount,
+    this.type = TransactionType.expense,
     required this.category,
     required this.icon,
     required this.walletId,
@@ -38,6 +42,7 @@ class RecurringPayment {
     String? id,
     String? name,
     double? amount,
+    TransactionType? type,
     String? category,
     String? icon,
     String? walletId,
@@ -52,6 +57,7 @@ class RecurringPayment {
       id: id ?? this.id,
       name: name ?? this.name,
       amount: amount ?? this.amount,
+      type: type ?? this.type,
       category: category ?? this.category,
       icon: icon ?? this.icon,
       walletId: walletId ?? this.walletId,
@@ -82,6 +88,7 @@ class RecurringPayment {
       'id': id,
       'name': name,
       'amount': amount,
+      'type': type.name,
       'category': category,
       'icon': icon,
       'walletId': walletId,
@@ -99,6 +106,10 @@ class RecurringPayment {
       id: map['id'] as String,
       name: map['name'] as String,
       amount: (map['amount'] as num).toDouble(),
+      type: TransactionType.values.firstWhere(
+        (value) => value.name == map['type'],
+        orElse: () => TransactionType.expense,
+      ),
       category: map['category'] as String,
       icon: map['icon'] as String,
       walletId: map['walletId'] as String,

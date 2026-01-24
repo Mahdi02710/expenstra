@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/services/settings_service.dart';
+import '../utils/app_snackbar.dart';
 
 class PasscodeGate extends StatefulWidget {
   final Widget child;
@@ -43,11 +44,10 @@ class _PasscodeGateState extends State<PasscodeGate> {
     if (_controller.text.trim() == _passcode) {
       setState(() => _unlocked = true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Incorrect passcode'),
-          backgroundColor: AppColors.error,
-        ),
+      showAppSnackBar(
+        context,
+        'Incorrect passcode',
+        backgroundColor: AppColors.error,
       );
     }
   }

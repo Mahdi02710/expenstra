@@ -13,6 +13,7 @@ import 'widgets/balance_card.dart';
 import 'widgets/quick_actions.dart';
 import 'widgets/transaction_form.dart';
 import 'widgets/transfer_form.dart';
+import '../../shared/utils/app_snackbar.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -499,31 +500,27 @@ class _TimelineScreenState extends State<TimelineScreen>
             .deleteTransaction(tx.id)
             .then((_) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Deleted "${tx.description}"'),
-                    backgroundColor: AppColors.success,
-                    action: SnackBarAction(
-                      label: 'Undo',
-                      textColor: Colors.white,
-                      onPressed: () {
-                        // Note: Undo would require re-adding the transaction
-                        // This is a placeholder for future undo functionality
-                      },
-                    ),
+                showAppSnackBar(
+                  context,
+                  'Deleted "${tx.description}"',
+                  backgroundColor: AppColors.success,
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      // Note: Undo would require re-adding the transaction
+                      // This is a placeholder for future undo functionality
+                    },
                   ),
                 );
               }
             })
             .catchError((error) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Error deleting transaction: ${error.toString()}',
-                    ),
-                    backgroundColor: AppColors.error,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Error deleting transaction: ${error.toString()}',
+                  backgroundColor: AppColors.error,
                 );
               }
             });
@@ -586,23 +583,19 @@ class _TimelineScreenState extends State<TimelineScreen>
             .addTransaction(result)
             .then((_) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '${result.type == TransactionType.income ? "Income" : "Expense"} added successfully',
-                    ),
-                    backgroundColor: AppColors.success,
-                  ),
+                showAppSnackBar(
+                  context,
+                  '${result.type == TransactionType.income ? "Income" : "Expense"} added successfully',
+                  backgroundColor: AppColors.success,
                 );
               }
             })
             .catchError((error) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${error.toString()}'),
-                    backgroundColor: AppColors.error,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Error: ${error.toString()}',
+                  backgroundColor: AppColors.error,
                 );
               }
             });
@@ -623,21 +616,19 @@ class _TimelineScreenState extends State<TimelineScreen>
             .addTransaction(result)
             .then((_) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Income added successfully'),
-                    backgroundColor: AppColors.success,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Income added successfully',
+                  backgroundColor: AppColors.success,
                 );
               }
             })
             .catchError((error) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${error.toString()}'),
-                    backgroundColor: AppColors.error,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Error: ${error.toString()}',
+                  backgroundColor: AppColors.error,
                 );
               }
             });
@@ -658,21 +649,19 @@ class _TimelineScreenState extends State<TimelineScreen>
             .addTransaction(result)
             .then((_) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Expense added successfully'),
-                    backgroundColor: AppColors.success,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Expense added successfully',
+                  backgroundColor: AppColors.success,
                 );
               }
             })
             .catchError((error) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${error.toString()}'),
-                    backgroundColor: AppColors.error,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Error: ${error.toString()}',
+                  backgroundColor: AppColors.error,
                 );
               }
             });
@@ -730,21 +719,19 @@ class _TimelineScreenState extends State<TimelineScreen>
             ])
             .then((_) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Transfer completed successfully'),
-                    backgroundColor: AppColors.success,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Transfer completed successfully',
+                  backgroundColor: AppColors.success,
                 );
               }
             })
             .catchError((error) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${error.toString()}'),
-                    backgroundColor: AppColors.error,
-                  ),
+                showAppSnackBar(
+                  context,
+                  'Error: ${error.toString()}',
+                  backgroundColor: AppColors.error,
                 );
               }
             });
@@ -858,192 +845,200 @@ class _TimelineScreenState extends State<TimelineScreen>
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) {
-          return Container(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+          return SafeArea(
+            top: false,
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Filter Transactions',
-                        style: AppTextStyles.h3.copyWith(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? AppColors.darkTextPrimary
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Type filter
-                      Text('Type', style: AppTextStyles.subtitle2),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilterChip(
-                              label: const Text('All'),
-                              selected: tempType == null,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  setSheetState(() => tempType = null);
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilterChip(
-                              label: const Text('Income'),
-                              selected: tempType == TransactionType.income,
-                              onSelected: (selected) {
-                                setSheetState(() {
-                                  tempType = selected
-                                      ? TransactionType.income
-                                      : null;
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilterChip(
-                              label: const Text('Expense'),
-                              selected: tempType == TransactionType.expense,
-                              onSelected: (selected) {
-                                setSheetState(() {
-                                  tempType = selected
-                                      ? TransactionType.expense
-                                      : null;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Category filter
-                      Text('Category', style: AppTextStyles.subtitle2),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          FilterChip(
-                            label: const Text('All'),
-                            selected: tempCategory == null,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setSheetState(() => tempCategory = null);
-                              }
-                            },
-                          ),
-                          ...categories.map(
-                            (category) => FilterChip(
-                              label: Text(category),
-                              selected: tempCategory == category,
-                              onSelected: (selected) {
-                                setSheetState(() {
-                                  tempCategory = selected ? category : null;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Wallet filter
-                      Text('Wallet', style: AppTextStyles.subtitle2),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          FilterChip(
-                            label: const Text('All'),
-                            selected: tempWalletId == null,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setSheetState(() => tempWalletId = null);
-                              }
-                            },
-                          ),
-                          ..._walletsCache.map(
-                            (wallet) => FilterChip(
-                              label: Text('${wallet.icon} ${wallet.name}'),
-                              selected: tempWalletId == wallet.id,
-                              onSelected: (selected) {
-                                setSheetState(() {
-                                  tempWalletId = selected ? wallet.id : null;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                setSheetState(() {
-                                  tempType = null;
-                                  tempCategory = null;
-                                  tempWalletId = null;
-                                });
-                              },
-                              child: const Text('Clear'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _filterType = tempType;
-                                  _filterCategory = tempCategory;
-                                  _filterWalletId = tempWalletId;
-                                });
-                                Navigator.pop(context);
-                              },
-                              child: const Text('Apply'),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-                    ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Filter Transactions',
+                            style: AppTextStyles.h3.copyWith(
+                              color:
+                                  Theme.of(context).brightness == Brightness.dark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Type filter
+                          Text('Type', style: AppTextStyles.subtitle2),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: FilterChip(
+                                  label: const Text('All'),
+                                  selected: tempType == null,
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      setSheetState(() => tempType = null);
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilterChip(
+                                  label: const Text('Income'),
+                                  selected: tempType == TransactionType.income,
+                                  onSelected: (selected) {
+                                    setSheetState(() {
+                                      tempType = selected
+                                          ? TransactionType.income
+                                          : null;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilterChip(
+                                  label: const Text('Expense'),
+                                  selected: tempType == TransactionType.expense,
+                                  onSelected: (selected) {
+                                    setSheetState(() {
+                                      tempType = selected
+                                          ? TransactionType.expense
+                                          : null;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Category filter
+                          Text('Category', style: AppTextStyles.subtitle2),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              FilterChip(
+                                label: const Text('All'),
+                                selected: tempCategory == null,
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setSheetState(() => tempCategory = null);
+                                  }
+                                },
+                              ),
+                              ...categories.map(
+                                (category) => FilterChip(
+                                  label: Text(category),
+                                  selected: tempCategory == category,
+                                  onSelected: (selected) {
+                                    setSheetState(() {
+                                      tempCategory = selected ? category : null;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Wallet filter
+                          Text('Wallet', style: AppTextStyles.subtitle2),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              FilterChip(
+                                label: const Text('All'),
+                                selected: tempWalletId == null,
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setSheetState(() => tempWalletId = null);
+                                  }
+                                },
+                              ),
+                              ..._walletsCache.map(
+                                (wallet) => FilterChip(
+                                  label: Text('${wallet.icon} ${wallet.name}'),
+                                  selected: tempWalletId == wallet.id,
+                                  onSelected: (selected) {
+                                    setSheetState(() {
+                                      tempWalletId = selected ? wallet.id : null;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    setSheetState(() {
+                                      tempType = null;
+                                      tempCategory = null;
+                                      tempWalletId = null;
+                                    });
+                                  },
+                                  child: const Text('Clear'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _filterType = tempType;
+                                      _filterCategory = tempCategory;
+                                      _filterWalletId = tempWalletId;
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text('Apply'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: MediaQuery.of(context).padding.bottom),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -1219,22 +1214,20 @@ class _TimelineScreenState extends State<TimelineScreen>
                           navigator.pop();
                         }
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Transaction deleted'),
-                          backgroundColor: AppColors.success,
-                        ),
+                      showAppSnackBar(
+                        context,
+                        'Transaction deleted',
+                        backgroundColor: AppColors.success,
                       );
                     }
                   })
                   .catchError((error) {
                     if (mounted) {
                       Navigator.of(dialogContext).pop(); // Close dialog
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: ${error.toString()}'),
-                          backgroundColor: AppColors.error,
-                        ),
+                      showAppSnackBar(
+                        context,
+                        'Error: ${error.toString()}',
+                        backgroundColor: AppColors.error,
                       );
                     }
                   });
