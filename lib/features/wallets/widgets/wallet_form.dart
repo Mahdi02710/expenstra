@@ -6,7 +6,10 @@ import '../../../data/models/recurring_payment.dart';
 import '../../../data/models/transaction.dart';
 import '../../../data/models/wallet.dart';
 import '../../../data/services/unified_data_service.dart';
+<<<<<<< HEAD
 import '../../../shared/utils/app_snackbar.dart';
+=======
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
 
 class WalletForm extends StatefulWidget {
   final Wallet? wallet;
@@ -269,8 +272,12 @@ class _WalletFormState extends State<WalletForm> {
                       final wallets = (snapshot.data ?? [])
                           .where((wallet) => wallet.id != widget.wallet?.id)
                           .toList();
+<<<<<<< HEAD
                       final selectedValue =
                           wallets.any(
+=======
+                      final selectedValue = wallets.any(
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
                             (wallet) => wallet.id == _rolloverTargetId,
                           )
                           ? _rolloverTargetId
@@ -294,7 +301,11 @@ class _WalletFormState extends State<WalletForm> {
                         );
                       }
                       return DropdownButtonFormField<String>(
+<<<<<<< HEAD
                         initialValue: selectedValue,
+=======
+                        value: selectedValue,
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
                         isExpanded: true,
                         items: wallets
                             .map(
@@ -384,6 +395,7 @@ class _WalletFormState extends State<WalletForm> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       filled: true,
+<<<<<<< HEAD
                       fillColor: Theme.of(context).brightness == Brightness.dark
                           ? AppColors.darkInputBackground
                           : AppColors.inputBackground,
@@ -391,6 +403,15 @@ class _WalletFormState extends State<WalletForm> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
+=======
+                      fillColor:
+                          Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.darkInputBackground
+                          : AppColors.inputBackground,
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
                     validator: (value) {
                       if (!_enableMonthlyIncome) return null;
                       if (value == null || value.isEmpty) {
@@ -409,7 +430,12 @@ class _WalletFormState extends State<WalletForm> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
+<<<<<<< HEAD
                         color: Theme.of(context).brightness == Brightness.dark
+=======
+                        color:
+                            Theme.of(context).brightness == Brightness.dark
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
                             ? AppColors.darkInputBackground
                             : AppColors.inputBackground,
                         borderRadius: BorderRadius.circular(12),
@@ -422,9 +448,14 @@ class _WalletFormState extends State<WalletForm> {
                           const Icon(Icons.calendar_today, size: 20),
                           const SizedBox(width: 12),
                           Text(
+<<<<<<< HEAD
                             DateFormat(
                               'MMM dd, yyyy',
                             ).format(_monthlyIncomeStartDate),
+=======
+                            DateFormat('MMM dd, yyyy')
+                                .format(_monthlyIncomeStartDate),
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
                             style: AppTextStyles.body1.copyWith(
                               color:
                                   Theme.of(context).brightness ==
@@ -608,10 +639,17 @@ class _WalletFormState extends State<WalletForm> {
     if (!_formKey.currentState!.validate()) return;
     if (_isLoadingSalary) return;
     if (_isMonthlyRollover && _rolloverTargetId == null) {
+<<<<<<< HEAD
       showAppSnackBar(
         context,
         'Please select a rollover target wallet',
         backgroundColor: AppColors.warning,
+=======
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a rollover target wallet'),
+        ),
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
       );
       return;
     }
@@ -651,9 +689,13 @@ class _WalletFormState extends State<WalletForm> {
           ? _nextMonthlyRunDate(_monthlyIncomeStartDate)
           : _salaryNextRunAt!;
       salaryPayment = RecurringPayment(
+<<<<<<< HEAD
         id:
             _salaryPaymentId ??
             DateTime.now().millisecondsSinceEpoch.toString(),
+=======
+        id: _salaryPaymentId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
         name: '${_nameController.text.trim()} Salary',
         amount: amount,
         type: TransactionType.income,
@@ -694,3 +736,7 @@ class WalletFormResult {
     this.recurringPaymentIdToDelete,
   });
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
