@@ -141,26 +141,20 @@ class _TimelineScreenState extends State<TimelineScreen>
                         }
                       }
 
-                      // Calculate net worth from all wallets
-                      // Net Worth = Assets (non-credit wallets) - Liabilities (credit card debt)
+
                       for (final wallet in wallets) {
                         final balance =
                             walletBalances[wallet.id] ?? wallet.balance;
                         if (wallet.type == WalletType.credit) {
-                          // Credit cards: only negative balances count as debt (liabilities)
-                          // Positive balances (available credit) don't count as assets
                           if (balance < 0) {
                             totalBalance +=
-                                balance; // Subtract debt (balance is negative)
+                                balance;
                           }
-                          // If balance >= 0, it's available credit, not an asset, so ignore it
                         } else {
-                          // Non-credit wallets are assets
                           totalBalance += balance;
                         }
                       }
                     } else if (transactionsSnapshot.hasData) {
-                      // Fallback: if wallets aren't loaded yet, just calculate from transactions
                       final transactions = transactionsSnapshot.data!;
                       final now = DateTime.now();
                       final thisMonthStart = DateTime(now.year, now.month);
@@ -508,8 +502,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                     label: 'Undo',
                     textColor: Colors.white,
                     onPressed: () {
-                      // Note: Undo would require re-adding the transaction
-                      // This is a placeholder for future undo functionality
+
                     },
                   ),
                 );
@@ -602,7 +595,7 @@ class _TimelineScreenState extends State<TimelineScreen>
       }
     });
   }
-
+  // Show Income Sheet
   void _showAddIncomeSheet() {
     showModalBottomSheet(
       context: context,
@@ -635,7 +628,7 @@ class _TimelineScreenState extends State<TimelineScreen>
       }
     });
   }
-
+  // Expense Sheet
   void _showAddExpenseSheet() {
     showModalBottomSheet(
       context: context,

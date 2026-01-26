@@ -13,20 +13,14 @@ class SyncService {
   final FirestoreService _firestoreService = FirestoreService();
   final Connectivity _connectivity = Connectivity();
 
-  // Check if device is online
   Future<bool> isOnline() async {
     final connectivityResult = await _connectivity.checkConnectivity();
     return connectivityResult != ConnectivityResult.none;
   }
 
-  // Check if user is authenticated
   bool get isAuthenticated => FirebaseAuth.instance.currentUser != null;
 
-  // ==========================================
-  // SYNC ALL DATA
-  // ==========================================
 
-  /// Syncs all data: first downloads from Firebase, then uploads local changes
   Future<void> syncAll() async {
     if (!isAuthenticated) return;
 
@@ -37,10 +31,8 @@ class SyncService {
     }
 
     try {
-      // Step 1: Download from Firebase and save to local DB
       await _downloadFromFirebase();
 
-      // Step 2: Upload local changes to Firebase
       await _uploadToFirebase();
     } catch (e) {
       print('Error syncing data: $e');
@@ -77,9 +69,7 @@ class SyncService {
     }
   }
 
-  // ==========================================
-  // UPLOAD TO FIREBASE
-  // ==========================================
+
 
   Future<void> _uploadToFirebase() async {
     try {
@@ -137,9 +127,6 @@ class SyncService {
     }
   }
 
-  // ==========================================
-  // INDIVIDUAL SYNC METHODS
-  // ==========================================
 
   /// Syncs a single transaction
   Future<void> syncTransaction(Transaction transaction) async {
@@ -242,9 +229,6 @@ class SyncService {
     }
   }
 
-  // ==========================================
-  // STREAM METHODS (Read from local DB)
-  // ==========================================
 
   /// Gets transactions stream from local DB, with periodic sync
   Stream<List<Transaction>> getTransactionsStream() async* {

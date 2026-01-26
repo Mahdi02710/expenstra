@@ -687,34 +687,18 @@ class _WalletsScreenState extends State<WalletsScreen>
         await _unifiedService.addWallet(result.wallet);
         await _applyRecurringPaymentChanges(result);
         if (mounted) {
-<<<<<<< HEAD
           showAppSnackBar(
             context,
             'Wallet added successfully',
             backgroundColor: AppColors.success,
-=======
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Wallet added successfully'),
-              backgroundColor: AppColors.success,
-            ),
->>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
           );
         }
       } catch (error) {
         if (mounted) {
-<<<<<<< HEAD
           showAppSnackBar(
             context,
             'Error: ${error.toString()}',
             backgroundColor: AppColors.error,
-=======
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${error.toString()}'),
-              backgroundColor: AppColors.error,
-            ),
->>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
           );
         }
       }
@@ -739,43 +723,25 @@ class _WalletsScreenState extends State<WalletsScreen>
         await _unifiedService.updateWallet(result.wallet);
         await _applyRecurringPaymentChanges(result);
         if (mounted) {
-<<<<<<< HEAD
           showAppSnackBar(
             context,
             'Wallet updated successfully',
             backgroundColor: AppColors.success,
-=======
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Wallet updated successfully'),
-              backgroundColor: AppColors.success,
-            ),
->>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
           );
         }
       } catch (error) {
         if (mounted) {
-<<<<<<< HEAD
           showAppSnackBar(
             context,
             'Error: ${error.toString()}',
             backgroundColor: AppColors.error,
-=======
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${error.toString()}'),
-              backgroundColor: AppColors.error,
-            ),
->>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
           );
         }
       }
     });
   }
 
-  Future<void> _applyRecurringPaymentChanges(
-    WalletFormResult result,
-  ) async {
+  Future<void> _applyRecurringPaymentChanges(WalletFormResult result) async {
     if (result.recurringPaymentIdToDelete != null) {
       await _unifiedService.deleteRecurringPayment(
         result.recurringPaymentIdToDelete!,
@@ -783,9 +749,7 @@ class _WalletsScreenState extends State<WalletsScreen>
     }
     if (result.recurringPayment != null) {
       if (result.recurringPaymentExists) {
-        await _unifiedService.updateRecurringPayment(
-          result.recurringPayment!,
-        );
+        await _unifiedService.updateRecurringPayment(result.recurringPayment!);
       } else {
         await _unifiedService.addRecurringPayment(result.recurringPayment!);
       }
@@ -1060,7 +1024,9 @@ class _WalletsScreenState extends State<WalletsScreen>
                           Text(
                             'Filter Wallets',
                             style: AppTextStyles.h3.copyWith(
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? AppColors.darkTextPrimary
                                   : AppColors.textPrimary,
                             ),
@@ -1134,7 +1100,9 @@ class _WalletsScreenState extends State<WalletsScreen>
                               ),
                             ],
                           ),
-                          SizedBox(height: MediaQuery.of(context).padding.bottom),
+                          SizedBox(
+                            height: MediaQuery.of(context).padding.bottom,
+                          ),
                         ],
                       ),
                     ),

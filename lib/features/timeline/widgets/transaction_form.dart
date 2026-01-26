@@ -562,14 +562,9 @@ class _TransactionFormState extends State<TransactionForm> {
             StreamBuilder<List<Wallet>>(
               stream: _unifiedService.getWallets(),
               builder: (context, snapshot) {
-<<<<<<< HEAD
                 final wallets = (snapshot.data ?? [])
                     .where((w) => w.isActive)
                     .toList();
-=======
-                final wallets =
-                    (snapshot.data ?? []).where((w) => w.isActive).toList();
->>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
                 final selectedWallet = _getSelectedWallet(wallets);
                 return Text(
                   selectedWallet?.icon ?? '💰',
@@ -582,14 +577,9 @@ class _TransactionFormState extends State<TransactionForm> {
               child: StreamBuilder<List<Wallet>>(
                 stream: _unifiedService.getWallets(),
                 builder: (context, snapshot) {
-<<<<<<< HEAD
                   final wallets = (snapshot.data ?? [])
                       .where((w) => w.isActive)
                       .toList();
-=======
-                  final wallets =
-                      (snapshot.data ?? []).where((w) => w.isActive).toList();
->>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
                   final selectedWallet = _getSelectedWallet(wallets);
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -778,14 +768,9 @@ class _TransactionFormState extends State<TransactionForm> {
       builder: (context) => StreamBuilder<List<Wallet>>(
         stream: _unifiedService.getWallets(),
         builder: (context, snapshot) {
-<<<<<<< HEAD
           final wallets = (snapshot.data ?? [])
               .where((w) => w.isActive)
               .toList();
-=======
-          final wallets =
-              (snapshot.data ?? []).where((w) => w.isActive).toList();
->>>>>>> edb1ca075c4910a65d856bb5f693e4b8837fb69e
 
           return SafeArea(
             top: false,
