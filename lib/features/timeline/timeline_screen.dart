@@ -141,14 +141,12 @@ class _TimelineScreenState extends State<TimelineScreen>
                         }
                       }
 
-
                       for (final wallet in wallets) {
                         final balance =
                             walletBalances[wallet.id] ?? wallet.balance;
                         if (wallet.type == WalletType.credit) {
                           if (balance < 0) {
-                            totalBalance +=
-                                balance;
+                            totalBalance += balance;
                           }
                         } else {
                           totalBalance += balance;
@@ -501,9 +499,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                   action: SnackBarAction(
                     label: 'Undo',
                     textColor: Colors.white,
-                    onPressed: () {
-
-                    },
+                    onPressed: () {},
                   ),
                 );
               }
@@ -595,6 +591,7 @@ class _TimelineScreenState extends State<TimelineScreen>
       }
     });
   }
+
   // Show Income Sheet
   void _showAddIncomeSheet() {
     showModalBottomSheet(
@@ -628,6 +625,7 @@ class _TimelineScreenState extends State<TimelineScreen>
       }
     });
   }
+
   // Expense Sheet
   void _showAddExpenseSheet() {
     showModalBottomSheet(
@@ -875,7 +873,8 @@ class _TimelineScreenState extends State<TimelineScreen>
                             'Filter Transactions',
                             style: AppTextStyles.h3.copyWith(
                               color:
-                                  Theme.of(context).brightness == Brightness.dark
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? AppColors.darkTextPrimary
                                   : AppColors.textPrimary,
                             ),
@@ -985,7 +984,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                                   selected: tempWalletId == wallet.id,
                                   onSelected: (selected) {
                                     setSheetState(() {
-                                      tempWalletId = selected ? wallet.id : null;
+                                      tempWalletId = selected
+                                          ? wallet.id
+                                          : null;
                                     });
                                   },
                                 ),
@@ -1025,7 +1026,9 @@ class _TimelineScreenState extends State<TimelineScreen>
                               ),
                             ],
                           ),
-                          SizedBox(height: MediaQuery.of(context).padding.bottom),
+                          SizedBox(
+                            height: MediaQuery.of(context).padding.bottom,
+                          ),
                         ],
                       ),
                     ),

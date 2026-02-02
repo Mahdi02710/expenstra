@@ -205,18 +205,28 @@ class Wallet {
       isActive: map['isActive'] ?? true,
       createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
-          : DateTime.parse(map['createdAt'].toString()),
+          : map['createdAt'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int)
+              : DateTime.parse(map['createdAt'].toString()),
       lastTransactionDate: map['lastTransactionDate'] != null
           ? (map['lastTransactionDate'] is Timestamp
               ? (map['lastTransactionDate'] as Timestamp).toDate()
-              : DateTime.parse(map['lastTransactionDate'].toString()))
+              : map['lastTransactionDate'] is int
+                  ? DateTime.fromMillisecondsSinceEpoch(
+                      map['lastTransactionDate'] as int,
+                    )
+                  : DateTime.parse(map['lastTransactionDate'].toString()))
           : null,
       isMonthlyRollover: map['isMonthlyRollover'] ?? false,
       rolloverToWalletId: map['rolloverToWalletId'],
       lastRolloverAt: map['lastRolloverAt'] != null
           ? (map['lastRolloverAt'] is Timestamp
               ? (map['lastRolloverAt'] as Timestamp).toDate()
-              : DateTime.parse(map['lastRolloverAt'].toString()))
+              : map['lastRolloverAt'] is int
+                  ? DateTime.fromMillisecondsSinceEpoch(
+                      map['lastRolloverAt'] as int,
+                    )
+                  : DateTime.parse(map['lastRolloverAt'].toString()))
           : null,
     );
   }

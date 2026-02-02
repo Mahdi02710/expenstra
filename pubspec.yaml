@@ -29,6 +29,7 @@ dependencies:
   local_auth: ^2.3.0
   crypto: ^3.0.3
   firebase_app_check: ^0.4.1+4
+  http: ^1.6.0
   
 
 dev_dependencies:

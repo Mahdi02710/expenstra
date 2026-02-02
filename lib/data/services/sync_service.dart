@@ -2,15 +2,16 @@
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
 import 'local_database_service.dart';
-import 'firestore_service.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
 
 class SyncService {
   final LocalDatabaseService _localDb = LocalDatabaseService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final ApiService _apiService = ApiService();
   final Connectivity _connectivity = Connectivity();
 
   Future<bool> isOnline() async {
@@ -20,6 +21,16 @@ class SyncService {
 
   bool get isAuthenticated => FirebaseAuth.instance.currentUser != null;
 
+  static const _transactionsLastSyncKey = 'sync_last_transactions';
+  static const _walletsLastSyncKey = 'sync_last_wallets';
+  static const _budgetsLastSyncKey = 'sync_last_budgets';
+
+  Future<void> resetSyncState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_transactionsLastSyncKey);
+    await prefs.remove(_walletsLastSyncKey);
+    await prefs.remove(_budgetsLastSyncKey);
+  }
 
   Future<void> syncAll() async {
     if (!isAuthenticated) return;
@@ -31,100 +42,74 @@ class SyncService {
     }
 
     try {
-      await _downloadFromFirebase();
-
-      await _uploadToFirebase();
+      await _syncTransactions();
+      await _syncWallets();
+      await _syncBudgets();
     } catch (e) {
       print('Error syncing data: $e');
     }
   }
 
-  // ==========================================
-  // DOWNLOAD FROM FIREBASE
-  // ==========================================
 
-  Future<void> _downloadFromFirebase() async {
-    try {
-      // Download transactions
-      final transactions = await _firestoreService.getTransactions().first;
-      for (final transaction in transactions) {
-        await _localDb.insertTransaction(transaction, synced: true);
-      }
-
-      // Download wallets
-      final wallets = await _firestoreService.getWallets().first;
-      for (final wallet in wallets) {
-        await _localDb.insertWallet(wallet, synced: true);
-      }
-
-      // Download budgets
-      final budgets = await _firestoreService.getBudgets().first;
-      for (final budget in budgets) {
-        await _localDb.insertBudget(budget, synced: true);
-      }
-
-      print('Downloaded all data from Firebase');
-    } catch (e) {
-      print('Error downloading from Firebase: $e');
+  Future<void> _syncTransactions() async {
+    final unsyncedTransactions = await _localDb.getUnsyncedTransactions();
+    final lastSync = await _getLastSync(_transactionsLastSyncKey);
+    final payload = {
+      'items': unsyncedTransactions.map(_transactionToApi).toList(),
+      'lastSync': lastSync,
+    };
+    final response =
+        await _apiService.post('/sync/transactions', payload) as Map;
+    final upserts = _normalizeList(response['upserts']);
+    for (final item in upserts) {
+      final transaction = Transaction.fromMap(item, item['id'] as String);
+      await _localDb.insertTransaction(transaction, synced: true);
     }
+    for (final transaction in unsyncedTransactions) {
+      await _localDb.markTransactionSynced(transaction.id);
+    }
+    await _setLastSync(
+      _transactionsLastSyncKey,
+      response['serverTime'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
-
-
-  Future<void> _uploadToFirebase() async {
-    try {
-      // Upload unsynced transactions
-      final unsyncedTransactions = await _localDb.getUnsyncedTransactions();
-      for (final transaction in unsyncedTransactions) {
-        try {
-          await _firestoreService.addTransaction(transaction);
-          await _localDb.markTransactionSynced(transaction.id);
-        } catch (e) {
-          print('Error uploading transaction ${transaction.id}: $e');
-        }
-      }
-
-      // Upload unsynced wallets
-      final wallets = await _localDb.getWallets();
-      for (final wallet in wallets) {
-        // Check if wallet exists in Firebase
-        final firebaseWallets = await _firestoreService.getWallets().first;
-        final exists = firebaseWallets.any((w) => w.id == wallet.id);
-
-        try {
-          if (exists) {
-            await _firestoreService.updateWallet(wallet);
-          } else {
-            await _firestoreService.addWallet(wallet);
-          }
-          await _localDb.markWalletSynced(wallet.id);
-        } catch (e) {
-          print('Error uploading wallet ${wallet.id}: $e');
-        }
-      }
-
-      // Upload unsynced budgets
-      final budgets = await _localDb.getBudgets();
-      for (final budget in budgets) {
-        final firebaseBudgets = await _firestoreService.getBudgets().first;
-        final exists = firebaseBudgets.any((b) => b.id == budget.id);
-
-        try {
-          if (exists) {
-            await _firestoreService.updateBudget(budget);
-          } else {
-            await _firestoreService.addBudget(budget);
-          }
-          await _localDb.markBudgetSynced(budget.id);
-        } catch (e) {
-          print('Error uploading budget ${budget.id}: $e');
-        }
-      }
-
-      print('Uploaded all local changes to Firebase');
-    } catch (e) {
-      print('Error uploading to Firebase: $e');
+  Future<void> _syncWallets() async {
+    final wallets = await _localDb.getWallets();
+    final lastSync = await _getLastSync(_walletsLastSyncKey);
+    final payload = {
+      'items': wallets.map(_walletToApi).toList(),
+      'lastSync': lastSync,
+    };
+    final response = await _apiService.post('/sync/wallets', payload) as Map;
+    final upserts = _normalizeList(response['upserts']);
+    for (final item in upserts) {
+      final wallet = Wallet.fromMap(item, item['id'] as String);
+      await _localDb.insertWallet(wallet, synced: true);
     }
+    await _setLastSync(
+      _walletsLastSyncKey,
+      response['serverTime'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  Future<void> _syncBudgets() async {
+    final budgets = await _localDb.getBudgets();
+    final lastSync = await _getLastSync(_budgetsLastSyncKey);
+    final payload = {
+      'items': budgets.map(_budgetToApi).toList(),
+      'lastSync': lastSync,
+    };
+    final response = await _apiService.post('/sync/budgets', payload) as Map;
+    final upserts = _normalizeList(response['upserts']);
+    for (final item in upserts) {
+      final budget = Budget.fromMap(item, item['id'] as String);
+      await _localDb.insertBudget(budget, synced: true);
+    }
+    await _setLastSync(
+      _budgetsLastSyncKey,
+      response['serverTime'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
 
@@ -136,10 +121,9 @@ class SyncService {
     // If online and authenticated, also save to Firebase
     if (isAuthenticated && await isOnline()) {
       try {
-        await _firestoreService.addTransaction(transaction);
-        await _localDb.markTransactionSynced(transaction.id);
+        await _syncTransactions();
       } catch (e) {
-        print('Error syncing transaction to Firebase: $e');
+        print('Error syncing transaction to backend: $e');
         // Transaction remains in local DB with synced=false
       }
     }
@@ -151,17 +135,9 @@ class SyncService {
 
     if (isAuthenticated && await isOnline()) {
       try {
-        final wallets = await _firestoreService.getWallets().first;
-        final exists = wallets.any((w) => w.id == wallet.id);
-
-        if (exists) {
-          await _firestoreService.updateWallet(wallet);
-        } else {
-          await _firestoreService.addWallet(wallet);
-        }
-        await _localDb.markWalletSynced(wallet.id);
+        await _syncWallets();
       } catch (e) {
-        print('Error syncing wallet to Firebase: $e');
+        print('Error syncing wallet to backend: $e');
       }
     }
   }
@@ -172,17 +148,9 @@ class SyncService {
 
     if (isAuthenticated && await isOnline()) {
       try {
-        final budgets = await _firestoreService.getBudgets().first;
-        final exists = budgets.any((b) => b.id == budget.id);
-
-        if (exists) {
-          await _firestoreService.updateBudget(budget);
-        } else {
-          await _firestoreService.addBudget(budget);
-        }
-        await _localDb.markBudgetSynced(budget.id);
+        await _syncBudgets();
       } catch (e) {
-        print('Error syncing budget to Firebase: $e');
+        print('Error syncing budget to backend: $e');
       }
     }
   }
@@ -193,10 +161,10 @@ class SyncService {
 
     if (isAuthenticated && await isOnline()) {
       try {
-        await _firestoreService.deleteTransaction(id);
+        await _apiService.delete('/sync/transactions/$id');
         await _localDb.markTransactionSynced(id);
       } catch (e) {
-        print('Error deleting transaction from Firebase: $e');
+        print('Error deleting transaction from backend: $e');
       }
     }
   }
@@ -207,10 +175,10 @@ class SyncService {
 
     if (isAuthenticated && await isOnline()) {
       try {
-        await _firestoreService.deleteWallet(id);
+        await _apiService.delete('/sync/wallets/$id');
         await _localDb.markWalletSynced(id);
       } catch (e) {
-        print('Error deleting wallet from Firebase: $e');
+        print('Error deleting wallet from backend: $e');
       }
     }
   }
@@ -221,18 +189,97 @@ class SyncService {
 
     if (isAuthenticated && await isOnline()) {
       try {
-        await _firestoreService.deleteBudget(id);
+        await _apiService.delete('/sync/budgets/$id');
         await _localDb.markBudgetSynced(id);
       } catch (e) {
-        print('Error deleting budget from Firebase: $e');
+        print('Error deleting budget from backend: $e');
       }
     }
+  }
+
+  Future<int?> _getLastSync(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(key);
+  }
+
+  Future<void> _setLastSync(String key, int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(key, value);
+  }
+
+  Map<String, dynamic> _transactionToApi(Transaction transaction) {
+    return {
+      'id': transaction.id,
+      'type': transaction.type.name,
+      'amount': transaction.amount,
+      'currencyCode': transaction.currencyCode,
+      'originalAmount': transaction.originalAmount,
+      'exchangeRate': transaction.exchangeRate,
+      'description': transaction.description,
+      'category': transaction.category,
+      'icon': transaction.icon,
+      'date': transaction.date.millisecondsSinceEpoch,
+      'walletId': transaction.walletId,
+      'note': transaction.note,
+      'tags': transaction.tags,
+      'createdAt': transaction.date.millisecondsSinceEpoch,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+    };
+  }
+
+  Map<String, dynamic> _walletToApi(Wallet wallet) {
+    return {
+      'id': wallet.id,
+      'name': wallet.name,
+      'balance': wallet.balance,
+      'type': wallet.type.name,
+      'icon': wallet.icon,
+      'color': wallet.color,
+      'accountNumber': wallet.accountNumber,
+      'bankName': wallet.bankName,
+      'creditLimit': wallet.creditLimit,
+      'isActive': wallet.isActive,
+      'createdAt': wallet.createdAt.millisecondsSinceEpoch,
+      'lastTransactionDate': wallet.lastTransactionDate?.millisecondsSinceEpoch,
+      'isMonthlyRollover': wallet.isMonthlyRollover,
+      'rolloverToWalletId': wallet.rolloverToWalletId,
+      'lastRolloverAt': wallet.lastRolloverAt?.millisecondsSinceEpoch,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+    };
+  }
+
+  Map<String, dynamic> _budgetToApi(Budget budget) {
+    return {
+      'id': budget.id,
+      'name': budget.name,
+      'spent': budget.spent,
+      'limit': budget.limit,
+      'icon': budget.icon,
+      'color': budget.color,
+      'period': budget.period.name,
+      'category': budget.category,
+      'startDate': budget.startDate.millisecondsSinceEpoch,
+      'endDate': budget.endDate.millisecondsSinceEpoch,
+      'isActive': budget.isActive,
+      'alertThreshold': budget.alertThreshold,
+      'includedCategories': budget.includedCategories,
+      'createdAt': budget.startDate.millisecondsSinceEpoch,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+    };
+  }
+
+  List<Map<String, dynamic>> _normalizeList(dynamic items) {
+    if (items is List) {
+      return items
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+    }
+    return [];
   }
 
 
   /// Gets transactions stream from local DB, with periodic sync
   Stream<List<Transaction>> getTransactionsStream() async* {
-    // Initial load from local DB
     final localTransactions =
         await _localDb.getTransactions();
     yield localTransactions;

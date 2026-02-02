@@ -253,10 +253,14 @@ class Budget {
       category: map['category'] ?? 'Other',
       startDate: map['startDate'] is Timestamp
           ? (map['startDate'] as Timestamp).toDate()
-          : DateTime.parse(map['startDate'].toString()),
+          : map['startDate'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(map['startDate'] as int)
+              : DateTime.parse(map['startDate'].toString()),
       endDate: map['endDate'] is Timestamp
           ? (map['endDate'] as Timestamp).toDate()
-          : DateTime.parse(map['endDate'].toString()),
+          : map['endDate'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(map['endDate'] as int)
+              : DateTime.parse(map['endDate'].toString()),
       isActive: map['isActive'] ?? true,
       alertThreshold: map['alertThreshold'] != null
           ? (map['alertThreshold'] as num).toDouble()

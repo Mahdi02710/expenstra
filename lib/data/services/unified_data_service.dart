@@ -2,9 +2,9 @@
 
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'local_database_service.dart';
 import 'sync_service.dart';
-import 'firestore_service.dart';
 import 'settings_service.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
@@ -20,7 +20,6 @@ class UnifiedDataService {
 
   final LocalDatabaseService _localDb = LocalDatabaseService();
   final SyncService _syncService = SyncService();
-  final FirestoreService _firestoreService = FirestoreService();
   final SettingsService _settingsService = SettingsService();
 
   final _transactionsController =
@@ -41,6 +40,7 @@ class UnifiedDataService {
   List<Wallet>? _lastWallets;
   List<Budget>? _lastBudgets;
   bool _isInitialized = false;
+  static const _lastUserIdKey = 'session_last_user_id';
 
   /// Initialize the service - loads local data and starts syncing
   Future<void> initialize() async {
@@ -48,7 +48,9 @@ class UnifiedDataService {
 
     try {
       final autoSync = _settingsService.autoSyncEnabled.value;
-      if (FirebaseAuth.instance.currentUser != null) {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        await _handleUserChange(currentUser.uid);
         await _syncService.syncAll();
         await _refreshTransactions();
         await _refreshWallets();
@@ -61,8 +63,10 @@ class UnifiedDataService {
       _authSub ??= FirebaseAuth.instance.authStateChanges().listen((user) async {
         if (user == null) {
           _syncTimer?.cancel();
+          await _handleUserSignOut();
           return;
         }
+        await _handleUserChange(user.uid);
         await _syncService.syncAll();
         await _refreshTransactions();
         await _refreshWallets();
@@ -82,6 +86,35 @@ class UnifiedDataService {
       // Don't throw - allow app to continue with local data only
       // Still mark as initialized so app can proceed
       _isInitialized = true;
+    }
+  }
+
+  Future<void> _handleUserChange(String userId) async {
+    final lastUserId = await _getLastUserId();
+    if (lastUserId != userId) {
+      await clearLocalData();
+      await _syncService.resetSyncState();
+      await _setLastUserId(userId);
+    }
+  }
+
+  Future<void> _handleUserSignOut() async {
+    await clearLocalData();
+    await _syncService.resetSyncState();
+    await _setLastUserId(null);
+  }
+
+  Future<String?> _getLastUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastUserIdKey);
+  }
+
+  Future<void> _setLastUserId(String? userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (userId == null || userId.isEmpty) {
+      await prefs.remove(_lastUserIdKey);
+    } else {
+      await prefs.setString(_lastUserIdKey, userId);
     }
   }
 
@@ -423,19 +456,38 @@ class UnifiedDataService {
   // ==========================================
 
   Future<double> calculateWalletBalance(String walletId) async {
-    return await _firestoreService.calculateWalletBalance(walletId);
+    return await _localDb.calculateWalletBalance(walletId);
   }
 
   Future<double> calculateTotalBalance() async {
-    return await _firestoreService.calculateTotalBalance();
+    final wallets = await _localDb.getWallets();
+    return wallets.fold<double>(0.0, (sum, w) => sum + w.balance);
   }
 
   Future<double> calculateTotalIncome({Duration? period}) async {
-    return await _firestoreService.calculateTotalIncome(period: period);
+    final transactions = await _localDb.getTransactions();
+    final cutoff =
+        period != null ? DateTime.now().subtract(period) : null;
+    return transactions
+        .where(
+          (t) =>
+              t.type == TransactionType.income &&
+              (cutoff == null || !t.date.isBefore(cutoff)),
+        )
+        .fold<double>(0.0, (sum, t) => sum + t.amount);
   }
 
   Future<double> calculateTotalExpenses({Duration? period}) async {
-    return await _firestoreService.calculateTotalExpenses(period: period);
+    final transactions = await _localDb.getTransactions();
+    final cutoff =
+        period != null ? DateTime.now().subtract(period) : null;
+    return transactions
+        .where(
+          (t) =>
+              t.type == TransactionType.expense &&
+              (cutoff == null || !t.date.isBefore(cutoff)),
+        )
+        .fold<double>(0.0, (sum, t) => sum + t.amount);
   }
 
   // ==========================================

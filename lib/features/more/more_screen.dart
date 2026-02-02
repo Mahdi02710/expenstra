@@ -10,6 +10,8 @@ import 'package:expensetra/data/services/settings_service.dart';
 import 'package:expensetra/data/services/session_service.dart';
 import 'package:expensetra/data/services/sync_service.dart';
 import 'package:expensetra/data/services/category_service.dart';
+import 'package:expensetra/data/services/admin_service.dart';
+import 'package:expensetra/features/admin/admin_screen.dart';
 import 'package:expensetra/login_page/login_page.dart';
 import 'package:expensetra/shared/utils/app_snackbar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,6 +35,7 @@ class _MoreScreenState extends State<MoreScreen>
   final SessionService _sessionService = SessionService();
   final SyncService _syncService = SyncService();
   final CategoryService _categoryService = CategoryService();
+  final AdminService _adminService = AdminService();
 
   AnimationController? _headerAnimationController;
   AnimationController? _cardAnimationController;
@@ -43,6 +46,7 @@ class _MoreScreenState extends State<MoreScreen>
   Animation<double>? _floatingAnimation;
 
   ThemeMode _currentThemeMode = ThemeMode.system;
+  late Future<bool> _isAdminFuture;
 
   @override
   bool get wantKeepAlive => true;
@@ -90,6 +94,7 @@ class _MoreScreenState extends State<MoreScreen>
     _headerAnimationController!.forward();
     _cardAnimationController!.forward();
     _currentThemeMode = _settingsService.themeMode.value;
+    _isAdminFuture = _adminService.isAdmin();
   }
 
   @override
@@ -138,6 +143,9 @@ class _MoreScreenState extends State<MoreScreen>
 
     if (confirm == true) {
       try {
+        await _unifiedService.clearLocalData();
+        await _syncService.resetSyncState();
+        await _sessionService.setGuestMode(false);
         await _authService.signOut();
         if (mounted) {
           showAppSnackBar(
@@ -163,6 +171,7 @@ class _MoreScreenState extends State<MoreScreen>
     super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = FirebaseAuth.instance.currentUser;
+    final isGuest = _sessionService.isGuestMode.value;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -201,47 +210,9 @@ class _MoreScreenState extends State<MoreScreen>
                 child: _cardAnimation != null
                     ? FadeTransition(
                         opacity: _cardAnimation!,
-                        child: _buildSettingsSection('Account', [
-                          _SettingsItem(
-                            icon: Icons.person_outline,
-                            title: 'Profile Settings',
-                            subtitle: user?.email ?? 'Not signed in',
-                            onTap: () => _showProfileSettings(user, isDark),
-                          ),
-                          _SettingsItem(
-                            icon: Icons.security,
-                            title: 'Security & Privacy',
-                            subtitle: 'Passcode and biometrics',
-                            onTap: () => _showSecuritySettings(isDark),
-                          ),
-                          _SettingsItem(
-                            icon: Icons.notifications_outlined,
-                            title: 'Notifications',
-                            subtitle: 'Reminders and budget alerts',
-                            onTap: () => _showNotificationSettings(isDark),
-                          ),
-                        ], isDark),
+                        child: _buildAccountSection(isDark, user),
                       )
-                    : _buildSettingsSection('Account', [
-                        _SettingsItem(
-                          icon: Icons.person_outline,
-                          title: 'Profile Settings',
-                          subtitle: user?.email ?? 'Not signed in',
-                          onTap: () => _showProfileSettings(user, isDark),
-                        ),
-                        _SettingsItem(
-                          icon: Icons.security,
-                          title: 'Security & Privacy',
-                          subtitle: 'Passcode and biometrics',
-                          onTap: () => _showSecuritySettings(isDark),
-                        ),
-                        _SettingsItem(
-                          icon: Icons.notifications_outlined,
-                          title: 'Notifications',
-                          subtitle: 'Reminders and budget alerts',
-                          onTap: () => _showNotificationSettings(isDark),
-                        ),
-                      ], isDark),
+                    : _buildAccountSection(isDark, user),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -638,6 +609,52 @@ class _MoreScreenState extends State<MoreScreen>
             );
           },
         );
+      },
+    );
+  }
+
+  Widget _buildAccountSection(bool isDark, User? user) {
+    return FutureBuilder<bool>(
+      future: _isAdminFuture,
+      builder: (context, snapshot) {
+        final isAdmin = snapshot.data == true;
+        final items = [
+          _SettingsItem(
+            icon: Icons.person_outline,
+            title: 'Profile Settings',
+            subtitle: user?.email ?? 'Not signed in',
+            onTap: () => _showProfileSettings(user, isDark),
+          ),
+          _SettingsItem(
+            icon: Icons.security,
+            title: 'Security & Privacy',
+            subtitle: 'Passcode and biometrics',
+            onTap: () => _showSecuritySettings(isDark),
+          ),
+          _SettingsItem(
+            icon: Icons.notifications_outlined,
+            title: 'Notifications',
+            subtitle: 'Reminders and budget alerts',
+            onTap: () => _showNotificationSettings(isDark),
+          ),
+        ];
+
+        if (isAdmin) {
+          items.add(
+            _SettingsItem(
+              icon: Icons.admin_panel_settings,
+              title: 'Admin Dashboard',
+              subtitle: 'Users and system overview',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AdminScreen()),
+                );
+              },
+            ),
+          );
+        }
+
+        return _buildSettingsSection('Account', items, isDark);
       },
     );
   }

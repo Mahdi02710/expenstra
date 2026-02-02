@@ -151,10 +151,12 @@ class Transaction {
       description: map['description'] ?? '',
       category: map['category'] ?? 'General',
       icon: map['icon'] ?? '💰',
-      // Handles both Timestamp (from Firebase) and String (if using JSON)
+      // Handles Timestamp, milliseconds, or ISO string
       date: map['date'] is Timestamp
           ? (map['date'] as Timestamp).toDate()
-          : DateTime.parse(map['date'].toString()),
+          : (map['date'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(map['date'] as int)
+              : DateTime.parse(map['date'].toString())),
       walletId: map['walletId'] ?? '',
       note: map['note'],
       tags: map['tags'] is List ? List<String>.from(map['tags']) : [],

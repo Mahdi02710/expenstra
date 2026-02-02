@@ -1295,6 +1295,7 @@ class _WalletsScreenState extends State<WalletsScreen>
                                 horizontal: 4,
                                 vertical: 4,
                               ),
+                              onTap: () => _onWalletTap(wallet.id),
                               leading: CircleAvatar(
                                 backgroundColor: AppColors.primary.withValues(
                                   alpha: 0.1,
