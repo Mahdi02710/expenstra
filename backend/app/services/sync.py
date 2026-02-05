@@ -13,8 +13,10 @@ def _upsert_collection(
     batch = db.batch()
     server_time = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
     for item in items:
-        item.setdefault("createdAt", server_time)
-        item["updatedAt"] = server_time
+        created_at = _to_millis(item.get("createdAt")) or server_time
+        updated_at = _to_millis(item.get("updatedAt")) or server_time
+        item["createdAt"] = created_at
+        item["updatedAt"] = updated_at
         doc_ref = (
             db.collection("users")
             .document(user_id)

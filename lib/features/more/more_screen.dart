@@ -171,7 +171,6 @@ class _MoreScreenState extends State<MoreScreen>
     super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = FirebaseAuth.instance.currentUser;
-    final isGuest = _sessionService.isGuestMode.value;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

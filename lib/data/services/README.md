@@ -1,6 +1,8 @@
 # Data Storage Architecture
 
-This app uses a **dual storage system** - SQLite (local) + Firebase (cloud) for optimal performance and offline support.
+This app uses a **local-first system** (SQLite) with a **FastAPI backend** that
+brokers all cloud access. Firebase Auth is still used in the app, but Firestore is
+**only accessed through the backend**.
 
 ## Architecture Overview
 
@@ -10,30 +12,36 @@ This app uses a **dual storage system** - SQLite (local) + Firebase (cloud) for 
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
+┌────────────────────┐
 │ UnifiedDataService │  ← Main interface for app code
-└────────┬────────┘
+└────────┬───────────┘
          │
     ┌────┴────┐
     ▼         ▼
 ┌─────────┐ ┌──────────────┐
 │ LocalDB │ │ SyncService  │
-│ (SQLite)│ │              │
+│ (SQLite)│ │ (HTTP + Auth)│
 └─────────┘ └──────┬───────┘
                    │
                    ▼
+            ┌────────────────┐
+            │ FastAPI Backend│
+            │ (Admin SDK)    │
+            └──────┬─────────┘
+                   │
+                   ▼
             ┌──────────────┐
-            │ FirestoreService│
-            │   (Firebase)  │
+            │  Firestore   │
             └──────────────┘
 ```
 
 ## How It Works
 
 1. **Local First**: All data is saved to SQLite immediately (fast, works offline)
-2. **Background Sync**: Data syncs to Firebase in the background when online
-3. **Read from Local**: App reads from local DB first (instant, no network delay)
-4. **Automatic Sync**: Periodic sync every 30 seconds when authenticated
+2. **Backend Sync**: SyncService sends changes to the FastAPI backend
+3. **Firestore Only via Backend**: The app never touches Firestore directly
+4. **Read from Local**: App reads from local DB first (instant, no network delay)
+5. **Automatic Sync**: Periodic sync every 30 seconds when authenticated
 
 ## Usage
 
@@ -64,7 +72,7 @@ StreamBuilder<List<Transaction>>(
 ### Writing Data
 
 ```dart
-// Add transaction (saves locally immediately, syncs to Firebase in background)
+// Add transaction (saves locally immediately, syncs via backend)
 await unifiedService.addTransaction(transaction);
 
 // Update transaction
@@ -102,36 +110,24 @@ await unifiedService.clearLocalData();
 - Tracks sync status
 
 ### SyncService
-- Syncs data between local DB and Firebase
-- Handles conflict resolution
+- Syncs data between local DB and FastAPI
+- Sends Firebase ID token for verification
 - Manages online/offline state
+- Resets sync state on user change
 
-### FirestoreService
-- Handles Firebase operations
-- Used by SyncService for cloud operations
+### ApiService
+- Low-level HTTP client for backend calls
+- Adds Authorization header with Firebase ID token
+
+### FastAPI Backend (external)
+- Verifies Firebase ID tokens (Admin SDK)
+- Performs validation and upserts
+- Controls Firestore access
 
 ## Migration Guide
 
-To migrate existing code from FirestoreService to UnifiedDataService:
-
-**Before:**
-```dart
-final firestoreService = FirestoreService();
-StreamBuilder(
-  stream: firestoreService.getTransactions(),
-  ...
-)
-```
-
-**After:**
-```dart
-final unifiedService = UnifiedDataService();
-await unifiedService.initialize(); // Once at app start
-StreamBuilder(
-  stream: unifiedService.getTransactions(),
-  ...
-)
-```
+The app no longer uses FirestoreService directly.
+All cloud access goes through SyncService + FastAPI.
 
 ## Benefits
 

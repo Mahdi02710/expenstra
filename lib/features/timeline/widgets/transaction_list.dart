@@ -160,7 +160,7 @@ class TransactionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dataService = DataService();
-    final wallet = dataService.getWallet(transaction.walletId ?? '');
+    final wallet = dataService.getWallet(transaction.walletId);
 
     return InkWell(
       onTap: onTap,

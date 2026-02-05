@@ -300,6 +300,7 @@ class _WalletsScreenState extends State<WalletsScreen>
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'walletsFab',
         onPressed: _showAddWalletSheet,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? AppColors.gold

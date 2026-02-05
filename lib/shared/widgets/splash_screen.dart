@@ -78,14 +78,18 @@ class _SplashScreenState extends State<SplashScreen> {
     if (kIsWeb) return;
     try {
       if (kDebugMode) {
-        // Avoid App Check throttling/noise during local debug runs.
+        await FirebaseAppCheck.instance.activate(
+          androidProvider: AndroidProvider.debug,
+          appleProvider: AppleProvider.debug,
+        );
+        // Reduce noisy refreshes in debug; still installs provider.
         await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(false);
-        return;
+      } else {
+        await FirebaseAppCheck.instance.activate(
+          androidProvider: AndroidProvider.playIntegrity,
+          appleProvider: AppleProvider.deviceCheck,
+        );
       }
-      await FirebaseAppCheck.instance.activate(
-        androidProvider: AndroidProvider.playIntegrity,
-        appleProvider: AppleProvider.deviceCheck,
-      );
     } catch (_) {
       // Keep startup resilient if App Check is unavailable in debug.
     }

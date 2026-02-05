@@ -332,6 +332,7 @@ class _BudgetsScreenState extends State<BudgetsScreen>
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'budgetsFab',
         onPressed: _showAddBudgetSheet,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? AppColors.gold
@@ -566,68 +567,6 @@ class _BudgetsScreenState extends State<BudgetsScreen>
     });
   }
 
-  void _deleteBudget(
-    Budget budget, {
-    BuildContext? bottomSheetContext,
-  }) {
-    if (bottomSheetContext != null) {
-      final navigator = Navigator.of(bottomSheetContext);
-      if (navigator.canPop()) {
-        navigator.pop();
-      }
-    }
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Budget'),
-        content: Text(
-          'Are you sure you want to delete "${budget.name}"? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (Navigator.of(dialogContext).canPop()) {
-                Navigator.pop(dialogContext);
-              }
-            },
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              _unifiedService
-                  .deleteBudget(budget.id)
-                  .then((_) {
-                    if (mounted) {
-                      if (Navigator.of(dialogContext).canPop()) {
-                        Navigator.pop(dialogContext);
-                      }
-                      showAppSnackBar(
-                        context,
-                        'Budget deleted successfully',
-                        backgroundColor: AppColors.success,
-                      );
-                    }
-                  })
-                  .catchError((error) {
-                    if (mounted) {
-                      if (Navigator.of(dialogContext).canPop()) {
-                        Navigator.pop(dialogContext);
-                      }
-                      showAppSnackBar(
-                        context,
-                        'Error: ${error.toString()}',
-                        backgroundColor: AppColors.error,
-                      );
-                    }
-                  });
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showBudgetInsights() {
     showModalBottomSheet(

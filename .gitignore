@@ -44,5 +44,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Generated plugin registrant (should not be checked in)
+/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
 # Firebase Functions
 functions/node_modules/

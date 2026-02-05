@@ -11,7 +11,7 @@ import '../../data/models/transaction.dart';
 import '../../data/models/wallet.dart';
 import 'widgets/balance_card.dart';
 import 'widgets/quick_actions.dart';
-import 'widgets/transaction_form.dart';
+import 'transaction_form.dart';
 import 'widgets/transfer_form.dart';
 import '../../shared/utils/app_snackbar.dart';
 
@@ -424,6 +424,7 @@ class _TimelineScreenState extends State<TimelineScreen>
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'timelineFab',
         onPressed: _showAddTransactionSheet,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? AppColors.gold
