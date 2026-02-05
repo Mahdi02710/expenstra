@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import '../../shared/widgets/half_icon.dart';
 import '../timeline/timeline_screen.dart';
 import '../wallets/wallets_screen.dart';
 import '../budgets/budgets_screen.dart';
@@ -17,7 +16,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _currentIndex = 0;
   late PageController _pageController;
-  late AnimationController _bottomNavAnimationController;
 
   final List<Map<String, dynamic>> _tabs = [
     {
@@ -47,56 +45,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _pageController = PageController();
-    _bottomNavAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    // 🧠 Fix: force a rebuild after the first frame so layout adjusts correctly
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _bottomNavAnimationController.dispose();
     super.dispose();
   }
 
   void _onTabTapped(int index) {
     if (_currentIndex != index) {
-      setState(() {
-        _currentIndex = index;
-      });
       _pageController.animateToPage(
         index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutQuart,
       );
-
-      // Trigger animation for visual feedback
-      _bottomNavAnimationController.forward().then((_) {
-        _bottomNavAnimationController.reverse();
-      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(
-      context,
-    ).padding.bottom; // ✅ dynamic safe area
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double tabWidth = (screenWidth - 32) / _tabs.length;
+
+    final activeColor = Theme.of(context).brightness == Brightness.dark
+        ? AppColors.gold
+        : AppColors.primary;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: PageView(
         controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onPageChanged: (index) => setState(() => _currentIndex = index),
         children: _tabs.map((tab) => tab['screen'] as Widget).toList(),
       ),
       bottomNavigationBar: Container(
@@ -104,57 +85,92 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           left: 16,
           right: 16,
           bottom: bottomPadding > 0 ? bottomPadding : 8,
-          top: 8,
+          top: 12, // Increased top padding for the indicator
         ),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
               offset: const Offset(0, -2),
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: _tabs.asMap().entries.map((entry) {
-            final index = entry.key;
-            final tab = entry.value;
-            final isActive = _currentIndex == index;
-
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => _onTabTapped(index),
-                behavior: HitTestBehavior.opaque,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    HalfIcon(
-                      icon: tab['icon'] as IconData,
-                      isActive: isActive,
-                      size: 24,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      tab['label'] as String,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isActive
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: isActive
-                            ? (Theme.of(context).brightness == Brightness.dark
-                                  ? AppColors.gold
-                                  : AppColors.primary)
-                            : AppColors.textMuted,
-                      ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // 1. Sliding Top Indicator (Replaces the vertical line)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutBack, // Sits nicely with a tiny bounce
+              left: _currentIndex * tabWidth + (tabWidth * 0.25),
+              top: -12, // Align to the very top of the bar
+              child: Container(
+                width: tabWidth * 0.5,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: activeColor,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(3),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: activeColor.withValues(alpha: 0.5),
+                      blurRadius: 6,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),
               ),
-            );
-          }).toList(),
+            ),
+
+            // 2. Navigation Items
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: _tabs.asMap().entries.map((entry) {
+                final index = entry.key;
+                final tab = entry.value;
+                final isActive = _currentIndex == index;
+
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => _onTabTapped(index),
+                    behavior: HitTestBehavior.opaque,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Animated Scale and Color for the Icon
+                        AnimatedScale(
+                          scale: isActive ? 1.15 : 1.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            tab['icon'] as IconData,
+                            size: 24,
+                            color: isActive ? activeColor : AppColors.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Animated Text Color
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 200),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontFamily: 'Inter', // Or your default font
+                            fontWeight: isActive
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isActive ? activeColor : AppColors.textMuted,
+                          ),
+                          child: Text(tab['label'] as String),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ),
       ),
     );

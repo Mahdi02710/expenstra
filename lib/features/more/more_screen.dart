@@ -1318,12 +1318,13 @@ class _MoreScreenState extends State<MoreScreen>
   }
 
   void _showBackupAndSync(bool isDark) {
+    final parentContext = context;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (sheetContext) => Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: Theme.of(sheetContext).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(24),
@@ -1362,9 +1363,12 @@ class _MoreScreenState extends State<MoreScreen>
               onPressed: () async {
                 await _syncService.syncAll();
                 if (!mounted) return;
-                Navigator.pop(context);
+                final navigator = Navigator.of(sheetContext);
+                if (navigator.canPop()) {
+                  navigator.pop();
+                }
                 showAppSnackBar(
-                  context,
+                  parentContext,
                   'Sync completed',
                   backgroundColor: AppColors.success,
                 );
